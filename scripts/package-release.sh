@@ -78,8 +78,17 @@ HAS_MOD=0
 [[ -n "$MOD_DIR" ]] && HAS_MOD=1
 
 PKG="VPet-UOS-v${VERSION}"
-STAGE="$DIST/.stage"
 mkdir -p "$DIST"
+
+# 暂存目录放在系统临时目录, 用完即删。
+# 不要放在 dist/ 里: 里面全是符号链接(指向 _arm64/ 和 publish/mod), 用户会把它当成
+# 成品目录去右键"压缩", 压缩工具顺着断链读文件, 报"指向的源文件不存在"。
+STAGE="$(mktemp -d "${TMPDIR:-/tmp}/VPet-UOS-pkg.XXXXXXXX")"
+cleanup() {
+  find "$STAGE" -mindepth 1 -delete 2>/dev/null || true
+  rmdir "$STAGE" 2>/dev/null || true
+}
+trap cleanup EXIT
 
 # ---- 建暂存树(符号链接; 用 find -delete 清理, 避免触发批量删除保护) ----
 stage() {
@@ -123,9 +132,6 @@ fi
 
 stage 0
 pack "$DIST/${PKG}-linux-${ARCH}-nomod.tar.gz"
-
-# 清空暂存目录内容(留空目录, 下次复用; 不删目录本身)
-find "$STAGE" -mindepth 1 -delete 2>/dev/null || true
 
 # ---- 校验和 ----
 cd "$DIST"
