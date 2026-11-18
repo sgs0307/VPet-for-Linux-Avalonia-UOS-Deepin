@@ -154,12 +154,14 @@ VPet-Avalonia-UOS/
 │   ├── VPet-Avalonia-移植进度.md
 │   ├── 功能对比-未实现清单.md     原版 vs 移植版差距清单
 │   ├── 安装与排错.md
+│   ├── 发布流程.md            发版 SOP（改版本→构建→打包→推送→发 Release）
 │   └── verify-v*.log            各版本自检日志
 ├── scripts/
 │   ├── build.sh              构建并发布到 ./publish
 │   ├── install.sh            安装到 ~/.local/share/vpet + 桌面快捷方式
 │   ├── uninstall.sh          卸载
 │   ├── package-release.sh    打 Release 用的 tar.gz
+│   ├── release.sh            一键发版（改版本→构建→打包→提交→tag）
 │   └── vpet.sh.in            启动器模板（安装时生成真实路径）
 ├── packaging/
 │   └── vpet.desktop          桌面快捷方式模板
