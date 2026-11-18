@@ -1,6 +1,6 @@
 # VPet for Linux (Avalonia) — 统信 UOS / Deepin 适配版
 
-![Version](https://img.shields.io/badge/version-1.3.1-blue)
+![Version](https://img.shields.io/badge/version-1.4.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux%20(UOS%2FDeepin)-green)
 ![Arch](https://img.shields.io/badge/arch-x64%20%7C%20arm64-lightgrey)
 ![Framework](https://img.shields.io/badge/.NET-8.0-512bd4)
