@@ -11,6 +11,10 @@
 # 产物: dist/VPet-UOS-v<版本>-linux-<架构>-{full,nomod}.tar.gz
 #
 # 说明: 暂存目录里放的是符号链接, 1GB 级的 mod 不会被复制; tar -h 打包时才解开成真实文件。
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+# 用 sh 调用时自动切回 bash(dash 不支持 pipefail)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

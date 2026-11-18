@@ -11,9 +11,9 @@
 
 | 包 | 适用 | 大小 |
 |---|---|---|
-| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | **绝大多数 UOS / Deepin（amd64）**，含桌宠资源，解压即用 | ~990 MB |
-| `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 信创机器 / 鲲鹏 / 飞腾（arm64） | ~990 MB |
-| `VPet-UOS-v1.3.1-linux-*-nomod.tar.gz` | 已有 `mod/` 目录，或只想看程序本体 | ~9 MB |
+| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | **绝大多数 UOS / Deepin（amd64）**，含桌宠资源，解压即用 | ~1.0 GB |
+| `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 信创机器 / 鲲鹏 / 飞腾（arm64） | ~1.0 GB |
+| `VPet-UOS-v1.3.1-linux-*-nomod.tar.gz` | 已有 `mod/` 目录，或只想看程序本体 | ~42 MB |
 
 不确定自己的架构？终端里跑 `uname -m`：`x86_64` 选 x64，`aarch64` 选 arm64。
 
@@ -28,9 +28,8 @@ cd VPet-UOS-v1.3.1
 ./scripts/install.sh
 ```
 
-**前提：需要 .NET 8 运行时**（包里不含，控制体积）。
-UOS / Deepin 应用商店搜「.NET」，或从 <https://dotnet.microsoft.com/download/dotnet/8.0> 下载
-`dotnet-runtime-8.0`。安装脚本会自动找 dotnet 并写死路径到启动器里。
+**不需要安装 .NET。** 包是自包含的，.NET 8 运行时已经在 `publish/` 里，离线机器也能直接跑。
+用 `sh install.sh` 调用也可以（脚本会自动切回 bash）。
 
 装完桌面上会有「VPet 桌宠」图标，双击启动。卸载：`./scripts/uninstall.sh`。
 
@@ -59,6 +58,16 @@ UOS / Deepin 应用商店搜「.NET」，或从 <https://dotnet.microsoft.com/do
 - **完成提示数字错**：`info.count` 是整段工作的累计产出，原代码按「最后一分钟收入」写，数字对不上。已改为「本次收入 $X」。
 - **进行中列表行不刷新**：开始工作后列表行还停在"锁定/开始"的样子，「停止」按钮出不来。改为签名比对，变了才重建。
 
+### 安装体验修复
+
+在另一台新装 UOS 上装这个包时踩到两个坑，都已修：
+
+- **`sh install.sh` 直接报 `set: Illegal option -o pipefail`**：UOS 的 `/bin/sh` 是 dash，不支持 `pipefail`，
+  脚本一行都没执行。现在检测到非 bash 会自动 `exec bash` 重跑。
+- **「未找到 dotnet(.NET 8 运行时)」**：包里不含运行时，而应用商店不一定有 8.0。**现在改成自包含发布**，
+  .NET 8 运行时已经打进 `publish/`，**不需要在系统里装任何 .NET**；万一拿到的是框架依赖包，
+  脚本也会列出补装方案（官方 `dotnet-install.sh` / `apt` 包名 / `VPET_DOTNET=` 指定）。
+
 ---
 
 ## 已实现的功能（首版概览）
@@ -74,7 +83,7 @@ UOS / Deepin 应用商店搜「.NET」，或从 <https://dotnet.microsoft.com/do
 ## 已知问题
 
 - **鼠标穿透只在 X11（含 XWayland）下可用**。纯 Wayland 会话下自动降级为宠物大小的小窗，拖拽可用但无穿透 —— 这是协议限制，不是 bug。
-- 依赖 .NET 8 运行时，未做自包含发布。
+- 依赖 .NET 8 运行时：**发布包已内置**，无需系统安装；从源码构建想免依赖加 `--self-contained`。
 - 面板里的开关是点击式色块、数值用 `[−] 值 [+]` 步进器：没有引入 Avalonia 主题包，`CheckBox`/`MenuItem` 这类需要模板的控件不渲染，这是设计取舍。
 - 部分合成器下托盘/任务栏图标不显示（无边框置顶窗口），属预期行为。
 - 内存吃紧的机器上打开大列表可能 OOM，商店已分页规避。

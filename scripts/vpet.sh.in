@@ -1,22 +1,51 @@
 #!/usr/bin/env bash
 # VPet 桌宠启动器(由 install.sh 生成, 路径已写死, 不依赖 PATH)
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
 set -euo pipefail
 
 INSTALL_DIR="@INSTALL_DIR@"
+# 框架依赖包这里是安装时探测到的 dotnet 绝对路径; 自包含包留空(不需要外部运行时)
 DOTNET_BIN="@DOTNET_BIN@"
+APP="$INSTALL_DIR/VPet-Avalonia.App"
 
-# 写死的 dotnet 不存在时(例如用户换过 SDK 路径), 依次回退查找
-if [[ ! -x "$DOTNET_BIN" ]]; then
-  for c in "$(command -v dotnet 2>/dev/null || true)" \
-           "$HOME/dotnet/dotnet" "/usr/share/dotnet/dotnet" "/usr/lib/dotnet/dotnet" \
-           "/opt/dotnet/dotnet" "/usr/bin/dotnet"; do
-    if [[ -x "$c" ]]; then DOTNET_BIN="$c"; break; fi
-  done
+# 自包含包的 runtimeconfig.json 里是 includedFrameworks 而不是 framework
+SELF_CONTAINED=0
+if grep -q '"includedFrameworks"' "$INSTALL_DIR/VPet-Avalonia.App.runtimeconfig.json" 2>/dev/null; then
+  SELF_CONTAINED=1
 fi
 
-if [[ ! -x "$DOTNET_BIN" ]]; then
-  echo "未找到 .NET 8 运行时, 请先安装 dotnet, 或用 VPET_DOTNET=/path/to/dotnet 指定。" >&2
-  exit 1
+dotnet_help() {
+  echo "未找到可用的 .NET 8 运行时。" >&2
+  echo "  1) 换用文件名含 full 的自包含发布包(已内置运行时, 不需要装 .NET)" >&2
+  echo "  2) 安装运行时: bash dotnet-install.sh --channel 8.0 --runtime dotnet --install-dir \$HOME/.dotnet" >&2
+  echo "  3) 已经装在别处: VPET_DOTNET=/path/to/dotnet vpet.sh" >&2
+  # 从桌面图标启动时没有终端, 只往 stderr 写用户看不到任何东西, 尽量弹个窗
+  if [[ ! -t 2 ]] && command -v zenity >/dev/null 2>&1; then
+    zenity --error --title="VPet 桌宠" \
+      --text="未找到 .NET 8 运行时。\n\n请改用文件名含 full 的自包含发布包，或安装 .NET 8 运行时后重试。" \
+      2>/dev/null || true
+  fi
+}
+
+# 框架依赖包: 写死的 dotnet 不存在时(例如用户换过 SDK 路径), 依次回退查找
+if [[ "$SELF_CONTAINED" == "0" ]]; then
+  if [[ -n "${VPET_DOTNET:-}" && -x "${VPET_DOTNET:-}" ]]; then
+    DOTNET_BIN="$VPET_DOTNET"
+  elif [[ ! -x "$DOTNET_BIN" ]]; then
+    for c in "$(command -v dotnet 2>/dev/null || true)" \
+             "$HOME/.dotnet/dotnet" "$HOME/dotnet/dotnet" \
+             "/usr/share/dotnet/dotnet" "/usr/lib/dotnet/dotnet" \
+             "/usr/local/share/dotnet/dotnet" "/opt/dotnet/dotnet" \
+             "/snap/bin/dotnet"; do
+      if [[ -x "$c" ]]; then DOTNET_BIN="$c"; break; fi
+    done
+  fi
+  if [[ ! -x "$DOTNET_BIN" ]]; then
+    dotnet_help
+    exit 1
+  fi
 fi
 
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
@@ -41,15 +70,17 @@ if [[ ! -t 1 && -z "${VPET_KEEP_STDOUT:-}" ]]; then
   exec >>"$LOG_FILE" 2>&1
 fi
 
-# 优先用发布时生成的原生启动器; 它需要能解析到运行时, 所以先把 DOTNET_ROOT/PATH 指过去。
+# 优先用发布时生成的原生启动器; 框架依赖包需要它解析到运行时, 所以先把 DOTNET_ROOT/PATH 指过去。
 # 找不到运行时时(apphost 返回 131)回退到 dotnet <dll> 方式启动。
-if [[ -x "$INSTALL_DIR/VPet-Avalonia.App" ]]; then
-  export DOTNET_ROOT="$(dirname "$DOTNET_BIN")"
-  export PATH="$DOTNET_ROOT:$PATH"
+if [[ -x "$APP" ]]; then
+  if [[ "$SELF_CONTAINED" == "0" ]]; then
+    export DOTNET_ROOT="$(dirname "$DOTNET_BIN")"
+    export PATH="$DOTNET_ROOT:$PATH"
+  fi
   # 必须转发信号: 直接前台执行时, 外层 timeout / Ctrl-C / 关闭终端只杀掉了这个壳,
   # 桌宠本体留在后台继续跑。多个实例各自定时自动保存, 会互相覆盖 ~/.local/share/VPet/save.lps
   # (实测表现为"存档里的钱和等级莫名其妙变成天文数字或清零")。
-  "$INSTALL_DIR/VPet-Avalonia.App" "$@" &
+  "$APP" "$@" &
   child=$!
   # 只转发 TERM/INT: 关终端发出的 HUP 不转发, 否则 nohup/后台启动会被立刻杀掉
   trap 'kill -TERM "$child" 2>/dev/null || true' TERM INT
@@ -62,4 +93,8 @@ if [[ -x "$INSTALL_DIR/VPet-Avalonia.App" ]]; then
   echo "[VPet] 原生启动器未定位到运行时, 回退到 dotnet 直接启动" >&2
 fi
 
+if [[ "$SELF_CONTAINED" == "1" ]]; then
+  echo "[VPet] 缺少原生启动器: $APP" >&2
+  exit 1
+fi
 exec "$DOTNET_BIN" "$INSTALL_DIR/VPet-Avalonia.App.dll" "$@"

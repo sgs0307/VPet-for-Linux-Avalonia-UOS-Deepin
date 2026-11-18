@@ -15,11 +15,17 @@
 #   --push             推送到 origin(需先配好 remote 和凭据)
 #   --release          用 gh CLI 创建 GitHub Release(隐含 --push, 需要已装 gh 并登录)
 #   --notes-file       指定 Release 正文(默认 docs/RELEASE_NOTES-v<版本>.md)
+#   --framework-dependent  打框架依赖包(默认自包含: 运行时打进包里, 目标机不用装 .NET)
 #   --dry-run          只打印步骤, 不改任何文件
 #
 # 说明:
 #   - 桌宠资源(mod)不进仓库, 打包时从 publish/mod 取, 可用 VPET_MOD_SRC 覆盖
+#   - 自包含包每个约 90~95 MB(比框架依赖大 70 MB), 但省掉用户装运行时的全部麻烦
 #   - x64 是交叉编译产物; 本机是 arm64 时无法运行验证, 只有 arm64 包做过实机自检
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+# 用 sh 调用时自动切回 bash(dash 不支持 pipefail)
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -31,6 +37,8 @@ DO_PUSH=0
 DO_RELEASE=0
 DRY_RUN=0
 NOTES_FILE=""
+# 默认自包含: 目标机不用装 .NET(详见 README「安装」)
+SELF_CONTAINED=1
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -41,6 +49,7 @@ while [[ $# -gt 0 ]]; do
     --push)        DO_PUSH=1; shift ;;
     --release)     DO_RELEASE=1; DO_PUSH=1; shift ;;
     --notes-file)  NOTES_FILE="$2"; shift 2 ;;
+    --framework-dependent) SELF_CONTAINED=0; shift ;;
     --dry-run)     DRY_RUN=1; shift ;;
     -h|--help)     sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "未知参数: $1"; exit 1 ;;
@@ -65,6 +74,8 @@ run() {
 [[ -n "$NOTES_FILE" ]] || NOTES_FILE="$ROOT/docs/RELEASE_NOTES-v${VERSION}.md"
 
 TAG="v${VERSION}"
+SC_FLAG="false"
+[[ "$SELF_CONTAINED" == "1" ]] && SC_FLAG="true"
 cd "$ROOT"
 
 # ---- 前置检查 ----
@@ -111,11 +122,13 @@ if [[ "$SKIP_BUILD" == "1" ]]; then
 else
   step "2/6 构建 arm64"
   # 低内存机器上 MSBuild 子节点会被 OOM 杀掉, 统一用 -m:1
+  # 自包含要拉 Microsoft.NETCore.App.Runtime.linux-arm64, 本地源可能没有, 指一下公网源
   run env DOTNET_ROOT="$(dirname "$DOTNET_BIN")" \
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
       DOTNET_GCHeapHardLimitSOH=0x18000000 DOTNET_GCHeapHardLimitLOH=0x08000000 DOTNET_GCHeapHardLimitPOH=0x04000000 \
       "$DOTNET_BIN" publish "$ROOT/src/VPet-Avalonia.App" -c Release -r linux-arm64 \
-      --self-contained false -o "$ROOT/dist/_arm64" -m:1 -p:CopyModResources=false --nologo
+      --self-contained "$SC_FLAG" -o "$ROOT/dist/_arm64" -m:1 -p:CopyModResources=false \
+      --source https://api.nuget.org/v3/index.json --nologo
 fi
 
 # ---- 3. 交叉编译 x64 ----
@@ -131,7 +144,7 @@ else
       DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 DOTNET_CLI_TELEMETRY_OPTOUT=1 \
       DOTNET_GCHeapHardLimitSOH=0x18000000 DOTNET_GCHeapHardLimitLOH=0x08000000 DOTNET_GCHeapHardLimitPOH=0x04000000 \
       "$DOTNET_BIN" publish "$ROOT/src/VPet-Avalonia.App" -c Release -r linux-x64 \
-      --self-contained false -o "$ROOT/dist/_x64" -m:1 -p:CopyModResources=false \
+      --self-contained "$SC_FLAG" -o "$ROOT/dist/_x64" -m:1 -p:CopyModResources=false \
       --source https://api.nuget.org/v3/index.json --nologo
 fi
 

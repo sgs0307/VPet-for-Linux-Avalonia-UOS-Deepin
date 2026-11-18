@@ -2,6 +2,10 @@
 # 卸载 VPet 桌宠
 #
 # 用法: ./scripts/uninstall.sh [安装目录]
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
+# 用 sh 调用时自动切回 bash(dash 不支持 pipefail)
 set -euo pipefail
 
 INSTALL_DIR="${1:-${XDG_DATA_HOME:-$HOME/.local/share}/vpet}"

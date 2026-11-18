@@ -3,6 +3,13 @@
 #
 # 用法: ./scripts/install.sh [安装目录]
 # 默认安装目录: ${XDG_DATA_HOME:-$HOME/.local/share}/vpet
+#
+# 用 sh install.sh 调用也能跑: 很多用户习惯敲 sh, 而 /bin/sh 在 UOS/Deepin 上是 dash,
+# dash 不支持 pipefail, 会直接报 "set: Illegal option -o pipefail" 然后什么都不做。
+# 这里检测到不是 bash 就自己重新用 bash 执行一遍。
+if [ -z "${BASH_VERSION:-}" ]; then
+  exec bash "$0" "$@"
+fi
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -21,22 +28,79 @@ if [[ -d "$HOME/桌面" ]]; then
   DESKTOP_DIR="$HOME/桌面"
 fi
 
-# ---- 定位 dotnet ----
-DOTNET_BIN="${VPET_DOTNET:-}"
-if [[ -z "$DOTNET_BIN" ]]; then
-  if command -v dotnet >/dev/null 2>&1; then
-    DOTNET_BIN="$(command -v dotnet)"
-  else
-    for c in "$HOME/dotnet/dotnet" "/usr/share/dotnet/dotnet" "/usr/lib/dotnet/dotnet" "/opt/dotnet/dotnet" "/usr/bin/dotnet"; do
-      if [[ -x "$c" ]]; then DOTNET_BIN="$c"; break; fi
-    done
+# ---- 是否需要外部 .NET 运行时 ----
+# 自包含包把运行时一起打进了发布目录, runtimeconfig.json 里写的是 includedFrameworks
+# 而不是 framework。这种包在没装 .NET 的机器上也能直接跑, 不必再让用户去装运行时。
+SELF_CONTAINED=0
+if grep -q '"includedFrameworks"' "$SRC/VPet-Avalonia.App.runtimeconfig.json" 2>/dev/null; then
+  SELF_CONTAINED=1
+fi
+
+dotnet_help() {
+  echo ""
+  echo "怎么办(任选一种):"
+  echo "  1) 用自带运行时的包: 文件名含 full 的发布包已内置 .NET 8, 解压即用, 不需要系统装 dotnet"
+  echo "  2) 用官方脚本装到用户目录(不需要 root, 装完重跑本脚本即可):"
+  echo "       wget https://dot.net/v1/dotnet-install.sh -O /tmp/dotnet-install.sh"
+  echo "       bash /tmp/dotnet-install.sh --channel 8.0 --runtime dotnet --install-dir \"\$HOME/.dotnet\""
+  echo "  3) 系统包管理器(软件源里有的话): sudo apt install -y dotnet-runtime-8.0"
+  echo "  4) 已经装在别处: VPET_DOTNET=/path/to/dotnet ./scripts/install.sh"
+  echo ""
+}
+
+# 依次在 PATH、常见安装位置里找 dotnet。VPET_DOTNET 优先级最高。
+probe_dotnet() {
+  local c
+  if [[ -n "${VPET_DOTNET:-}" ]]; then
+    if [[ -x "$VPET_DOTNET" ]]; then echo "$VPET_DOTNET"; return 0; fi
+    echo "错误: VPET_DOTNET=$VPET_DOTNET 不存在或不可执行" >&2
+    return 1
   fi
+  c="$(command -v dotnet 2>/dev/null || true)"
+  if [[ -n "$c" && -x "$c" ]]; then echo "$c"; return 0; fi
+  # 官方脚本($HOME/.dotnet)、UOS 软件源(/usr/share/dotnet 等)、snap、手动解压到 /opt
+  for c in \
+    "$ROOT/dotnet/dotnet" \
+    "$HOME/.dotnet/dotnet" \
+    "$HOME/dotnet/dotnet" \
+    "/usr/share/dotnet/dotnet" \
+    "/usr/lib/dotnet/dotnet" \
+    "/usr/local/share/dotnet/dotnet" \
+    "/opt/dotnet/dotnet" \
+    "/snap/bin/dotnet" \
+    "/var/lib/snapd/snap/bin/dotnet"; do
+    [[ -x "$c" ]] && { echo "$c"; return 0; }
+  done
+  for c in /opt/*/dotnet /usr/lib/*/dotnet; do
+    [[ -x "$c" ]] && { echo "$c"; return 0; }
+  done
+  return 1
+}
+
+has_net8() {
+  local out
+  out="$("$1" --list-runtimes 2>/dev/null || true)"
+  [[ "$out" == *"Microsoft.NETCore.App 8."* ]]
+}
+
+DOTNET_BIN=""
+if [[ "$SELF_CONTAINED" == "1" ]]; then
+  echo "[install] 自包含包: 已内置 .NET 运行时, 无需系统安装 dotnet"
+else
+  if ! DOTNET_BIN="$(probe_dotnet)"; then
+    echo "错误: 未找到 dotnet(.NET 8 运行时)。"
+    dotnet_help
+    exit 1
+  fi
+  if ! has_net8 "$DOTNET_BIN"; then
+    echo "错误: $DOTNET_BIN 里没有 .NET 8 运行时, 桌宠无法启动。"
+    echo "      该 dotnet 里现有的运行时:"
+    "$DOTNET_BIN" --list-runtimes 2>/dev/null | sed 's/^/        /' || true
+    dotnet_help
+    exit 1
+  fi
+  echo "[install] dotnet: $DOTNET_BIN"
 fi
-if [[ -z "$DOTNET_BIN" || ! -x "$DOTNET_BIN" ]]; then
-  echo "错误: 未找到 dotnet(.NET 8 运行时)。可用 VPET_DOTNET=/path/to/dotnet 指定。"
-  exit 1
-fi
-echo "[install] dotnet: $DOTNET_BIN"
 
 # ---- 结束正在运行的实例 ----
 # 覆盖安装时如果桌宠还在跑: cp 会原地 truncate 同名 dll, 而进程已经把这些 dll

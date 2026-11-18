@@ -47,6 +47,28 @@
   「清屏」高亮为进行中并显示红色停止
 - 全量轻量自检 29 项全过（`docs/verify-v1.3.1.log`）
 
+### 发布形态：改为自包含，安装不再需要 .NET
+
+上一版发布包是框架依赖（framework-dependent），目标机没装 `dotnet-runtime-8.0` 就起不来。
+在另一台统信 UOS 上实测卡在两处：
+
+- `sh install.sh` 直接报 `install.sh: 6: set: Illegal option -o pipefail` —— UOS 的 `/bin/sh`
+  是 dash，不支持 `pipefail`，脚本一行没执行就退出（用户看不出是"命令用法不对"）
+- `./install.sh` 报 `错误: 未找到 dotnet(.NET 8 运行时)`，而应用商店里不一定有 8.0 的运行时包
+
+改动：
+
+- **`build.sh --self-contained`**（可配 `VPET_RID` 交叉）：把 .NET 8 运行时打进 `publish/`，
+  `runtimeconfig.json` 变成 `includedFrameworks`，目标机不需要装任何 .NET。Release 四个包全部自包含
+- **脚本兼容 `sh` 调用**：检测到非 bash 就 `exec bash "$0" "$@"` 重新执行，不再甩一句 dash 的报错
+- **dotnet 探测补全**：除 `PATH` 外还查 `$HOME/.dotnet`、`$HOME/dotnet`、`/usr/share/dotnet`、
+  `/usr/lib/dotnet`、`/usr/local/share/dotnet`、`/opt/*/dotnet`、snap；并且校验里面**确实有 .NET 8**
+  （只装了 6/7 时直接说明，而不是等启动时才甩 `You must install .NET`）
+- **缺运行时给可执行方案**：官方 `dotnet-install.sh` 装到用户目录（免 root）、`apt` 包名、
+  `VPET_DOTNET=` 指定路径
+- **`vpet.sh` 区分自包含 / 框架依赖**：自包含包不再要求 `DOTNET_BIN`，也不会导出错误的
+  `DOTNET_ROOT`；从桌面图标启动且真缺运行时时用 `zenity` 弹窗（原来只写 stderr，用户看不到任何反应）
+
 ### 新增调试后门
 
 | 环境变量 | 作用 |

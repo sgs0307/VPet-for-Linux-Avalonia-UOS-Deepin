@@ -73,9 +73,11 @@
 
 | 包 | 说明 |
 |---|---|
-| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | 含桌宠资源，**解压即用**（约 990 MB） |
+| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | 含桌宠资源 + .NET 运行时，**解压即用**（约 1.0 GB） |
 | `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
-| `...-nomod.tar.gz` | 不含桌宠资源，约 9 MB，需自备 `mod/` 目录 |
+| `...-nomod.tar.gz` | 不含桌宠资源，体积小（约 42 MB），需自备 `mod/` 目录 |
+
+不确定自己的架构？终端里跑 `uname -m`：`x86_64` 选 x64，`aarch64` 选 arm64。
 
 ```bash
 tar xzf VPet-UOS-v1.3.1-linux-x64-full.tar.gz
@@ -85,11 +87,15 @@ cd VPet-UOS-v1.3.1
 
 安装后桌面上会出现 **「VPet 桌宠」** 图标（沿用原版图标），双击即可运行。
 
-> 依赖 .NET 8 运行时。Release 包内**不含**运行时（体积考虑），请先装：
-> 统信 UOS / Deepin 应用商店搜「.NET」，或从 <https://dotnet.microsoft.com/download/dotnet/8.0> 下载
-> `dotnet-runtime-8.0` 的 Linux 包。安装脚本会自动探测 dotnet 路径并写死到启动器里，之后不依赖 PATH。
-> 如果 dotnet 装在非标准位置（脚本找的是 `$HOME/dotnet`、`/usr/share/dotnet`、`/opt/dotnet` 等），
-> 用 `VPET_DOTNET=/path/to/dotnet ./scripts/install.sh` 指定。
+> **不需要安装 .NET，也不需要 SDK。** 发布包是**自包含（self-contained）**的：.NET 8 运行时
+> 已经打在 `publish/` 目录里（`VPet-Avalonia.App.runtimeconfig.json` 里是 `includedFrameworks`），
+> 所以离线机器、没装过开发环境的新装系统都能直接跑。
+>
+> 安装脚本的两种细节：
+> - `sh install.sh` 也能用。脚本检测到不是 bash 会自动用 bash 重新执行（UOS 的 `/bin/sh` 是
+>   dash，不支持 `pipefail`，早期版本会直接报 `set: Illegal option -o pipefail`）。
+> - 万一你拿到的是**框架依赖**包（不含运行时），脚本会在常见位置找 dotnet 并校验有没有
+>   .NET 8，找不到就打印补装方案；也可以自己指定：`VPET_DOTNET=/path/to/dotnet ./scripts/install.sh`。
 
 ### 方式二：从源码构建
 
@@ -101,6 +107,13 @@ cd VPet-Avalonia-UOS
 ```
 
 需要 .NET 8 **SDK**。构建按**当前机器架构**产出（x64 / arm64 均可），不需要手动指定 RID。
+
+想打出**目标机不用装 .NET** 的包（就是 Release 里那种）：
+
+```bash
+./scripts/build.sh --self-contained          # 按本机架构，把运行时打进 publish/
+VPET_RID=linux-arm64 ./scripts/build.sh --self-contained   # 交叉出 arm64
+```
 
 只想编译、不复制 1 GB 资源：
 
@@ -196,8 +209,8 @@ VPET_SKIP_CLEAN=1 ./scripts/install.sh
 
 - **鼠标穿透只在 X11（含 XWayland）下可用**：Wayland 协议不允许客户端改写输入区域，程序会自动降级
   （此时窗口为宠物大小的小窗，拖拽仍可用但无穿透）。
-- **依赖 .NET 8 运行时**，未做自包含发布。需要单文件免依赖版本可自行
-  `dotnet publish -r linux-x64 --self-contained true`（体积约 150 MB）。
+- **依赖 .NET 8 运行时**。Release 里的包是自包含的（运行时已内置），从源码构建时默认是框架依赖，
+  想免依赖加 `./scripts/build.sh --self-contained`。
 - **没有音频子系统**，音量 / 音效设置项不生效。
 - **没有引入 Avalonia 主题包**，`CheckBox` / `MenuItem` 这类需要模板的控件不渲染，
   所以面板里的开关是点击式色块、数值用 `[−] 值 [+]` 步进器 —— 这是设计取舍不是 bug。
