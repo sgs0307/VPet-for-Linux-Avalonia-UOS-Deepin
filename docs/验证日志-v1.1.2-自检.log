@@ -1,0 +1,45 @@
+[VPet] 启动中...
+[VPet] MOD 目录: ~/.local/share/vpet/mod
+[VPet] 使用宠物定义: vup.lps
+[VPet] 加载宠物: vup (默认名 萝莉斯)
+[VPet] 动画加载完成, 共 621 组, 索引 23 类
+[VPet] 读档成功: 萝莉斯 金钱=984.5 等级=3 体力=99.8 饱腹=99.9 口渴=4.7 心情=100 健康=100 状态=Happy
+[VPet] 食物数据加载完成: 122 种
+[VPet] 显示器: 0,0 2160x1440 缩放=1 主屏=False
+[VPet] 显示器: 2160,0 2560x1440 缩放=1.25 主屏=False
+[VPet] 窗口对准显示器: 物理(0,0) 2160x1440 逻辑 2160x1440 缩放=1
+[TEST] 食物=122 背包=10 金钱=984.5
+[VPet] 投喂: 鸡祥如意 剩余 0
+[TEST] 投喂 鸡祥如意: 饱腹 50.0->100.0, 口渴 4.7->0.0, 心情 100.0->100.0, 库存 1->0
+[VPet] 购买: 戒指糖 花费 2.5 余额 982
+[TEST] 购买 戒指糖: 金钱 984.5->982.0, 持有 10
+[TEST] 开始工作 文案: ok=True State=Work NowWork=文案 TimerIsWorking=True
+[TEST] 工作动画: 期望=workone 实际=workone/A_Start/Happy
+[TEST] 工作 6 秒: 金钱 981.98->981.98, 计时=0.10分
+[TEST] 工作 20 秒: 金钱 981.98->982.50, 经验=996.7, 体力=99.8, 饱腹=99.9, 计时=0.33分
+[VPet] 工作结束: 文案 原因=MenualStop 时长=0.3分
+[TEST] 停止后 State=Nomal NowWork=null TimerIsWorking=False
+[TEST] 停止后动画=workone/C_End
+[TEST] 睡觉后 State=Sleep
+[TEST] 唤醒后 State=Nomal
+[VPet] 读档成功: 萝莉斯 金钱=982.5 等级=4 体力=99.8 饱腹=99.9 口渴=0 心情=100 健康=99.5 状态=Happy
+[TEST] 存档往返: 金钱 982.50->982.50, 经验 996.70->996.70, 体力 99.8->99.8, 饱腹 99.9->99.9
+[TEST] 存档内容: vpet:|name#萝莉斯:|hostname#:|money#982.5:|exp#996.7:|strength#99.8225:|StoreStrength#108:|strengthFood#99.8775:|StoreStrengthFood#135:|strengthDrink#0:|StoreStrengthDrink#-4.5:|feeling#100:|health#99.5063:|likability#19.45:|mode#Happy:|
+[TEST] 菜单: 根 11 项 → 点子菜单后 可见=True 项数=15 高度=0
+[TEST] 返回根菜单: 可见=True 项数=11
+[VPet] 窗口对准显示器: 物理(2160,0) 2560x1440 逻辑 2048x1152 缩放=1.25
+[VPet] 拖动换屏: → (2160,0) 宠物物理(560,450)
+[TEST] 跨屏: 切换=True 0,0 2160x1440 宠物=(560,450) → 2160,0 2160x1440 宠物=(-1280,360)
+[DBG] 换屏后回读: Position=(0,0) Bounds=2160x1440 视口=2160x1440
+[TEST] 跨屏后窗口实际: Position=(2160,0) Bounds=2048x1152
+[VPet] 窗口对准显示器: 物理(0,0) 2160x1440 逻辑 2160x1440 缩放=1
+[VPet] 拖动换屏: → (0,0) 宠物物理(2160,450)
+[TEST] 换回: True → 0,0 2048x1152
+[DBG] 换屏后回读: Position=(2160,0) Bounds=2048x1152 视口=2048x1152
+[TEST] 换回后窗口实际: Position=(0,0)
+[VPet] 窗口对准显示器: 物理(2160,0) 2560x1440 逻辑 2048x1152 缩放=1.25
+[VPet] 拖动换屏: → (2160,0) 宠物物理(2160,450)
+[DBG] 换屏后回读: Position=(2160,0) Bounds=2160x1440 视口=2160x1440
+[TEST] 边缘换屏: 切换=True 屏=2160 窗口实际=(2160,0) 宠物=(0,360)
+[TEST] 松手换屏: 屏=2160 窗口实际=(2160,0) 宠物=(0,360)
+[TEST] 自检结束

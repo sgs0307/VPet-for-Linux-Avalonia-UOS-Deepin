@@ -1,0 +1,30 @@
+# 统一换行符：源码与脚本用 LF，避免在 Linux 上出现 CRLF
+* text=auto eol=lf
+
+# 脚本必须可执行且是 LF
+*.sh            text eol=lf
+*.desktop       text eol=lf
+*.cs            text eol=lf
+*.axaml         text eol=lf
+*.csproj        text eol=lf
+*.sln           text eol=lf
+*.md            text eol=lf
+*.json          text eol=lf
+*.yml           text eol=lf
+*.in            text eol=lf
+
+# 二进制资源，禁止换行转换与 diff
+*.png           binary
+*.ico           binary
+*.ase           binary
+*.lps           binary
+*.zlps          binary
+*.dll           binary
+*.so            binary
+*.dylib         binary
+*.pdb           binary
+*.gz            binary
+
+# 语言统计：文档不计入代码行
+docs/*.md       linguist-documentation
+CHANGELOG.md    linguist-documentation

@@ -1,0 +1,33 @@
+# 构建产物
+publish/
+bin/
+obj/
+src/**/bin/
+src/**/obj/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+
+# 发布/安装包
+dist/
+*.deb
+*.rpm
+*.tar.gz
+*.tar.xz
+*.AppImage
+
+# 桌宠资源体积过大(1GB+), 不纳入仓库, 由构建脚本从本地 VPet 源目录复制
+src/VPet-Simulator.Windows/
+assets/mod/
+
+# 运行时日志(但保留 docs/ 下作为验证证据的自检日志)
+*.log
+!docs/*.log
+.test-run.log
+
+# 本地临时
+*.tmp
+*.bak
+backup/

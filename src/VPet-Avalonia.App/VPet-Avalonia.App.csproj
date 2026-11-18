@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>VPetAvalonia.App</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseAvaloniaDesktop>true</UseAvaloniaDesktop>
+    <AvaloniaDesktopStartupMode>ProgramMain</AvaloniaDesktopStartupMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.0" />
+    <!-- 主题包: 缺失时 MenuItem / Button / ProgressBar 等需要控件模板的控件不会渲染 -->
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../VPet-Avalonia.Abstractions/VPet-Avalonia.Abstractions.csproj" />
+    <ProjectReference Include="../VPet-Avalonia.Core.Migrated/VPet-Avalonia.Core.Migrated.csproj" />
+  </ItemGroup>
+
+  <!-- 桌宠资源(mod)的来源目录, 可用 -p:VPetModSource=<路径> 覆盖。
+       独立发布仓库不携带 1GB 级的资源, 构建脚本会自动传入实际位置 -->
+  <PropertyGroup>
+    <VPetModSource Condition="'$(VPetModSource)' == ''">../VPet-Simulator.Windows/mod</VPetModSource>
+  </PropertyGroup>
+
+  <!-- 把桌宠资源(mod)随程序一起输出, 否则运行时找不到任何动画。
+       资源较大时可用 -p:CopyModResources=false 跳过复制 -->
+  <ItemGroup Condition="'$(CopyModResources)' != 'false' And Exists('$(VPetModSource)')">
+    <None Include="$(VPetModSource)/**/*">
+      <Link>mod/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- 窗口图标(沿用原版 VPet 图标) -->
+  <ItemGroup>
+    <AvaloniaResource Include="assets/icon/vpet.png" />
+  </ItemGroup>
+
+</Project>

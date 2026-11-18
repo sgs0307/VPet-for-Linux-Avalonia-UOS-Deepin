@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\VPet-Avalonia.Abstractions\VPet-Avalonia.Abstractions.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LinePutScript" Version="1.11.9" />
+    <!-- APNG 解码: 与 Avalonia 11.3 自带的 SkiaSharp 同版本, 避免多版本共存导致原生库不匹配 -->
+    <PackageReference Include="SkiaSharp" Version="2.88.9" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>VPet_Avalonia.Core.Migrated</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>Exe</OutputType>
+    <StartupObject>VPetAvalonia.Core.Tests.TestProgram</StartupObject>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,101 @@
+<UserControl x:Class="VPetAvalonia.App.Views.ToolBar" xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+              mc:Ignorable="d"
+              d:DesignWidth="500" d:DesignHeight="500">
+    <Grid x:Name="MainGrid">
+        <Border x:Name="BdrPanel" Margin="0,0,0,55" VerticalAlignment="Bottom" 
+                Background="#2b2b2b" BorderBrush="#404040" BorderThickness="1" CornerRadius="5"
+                Cursor="Hand" IsVisible="False">
+            <Grid Margin="15" x:Name="gdPanel">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="5" />
+                    <ColumnDefinition />
+                    <ColumnDefinition Width="5" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                    <RowDefinition Height="30" />
+                </Grid.RowDefinitions>
+                
+                <TextBlock x:Name="Tlv" Grid.ColumnSpan="3" VerticalAlignment="Center" 
+                           Foreground="#81d4fa" Text="Lv 14" FontSize="14"/>
+                
+                <Button Grid.Column="2" Grid.ColumnSpan="3" HorizontalAlignment="Right" VerticalAlignment="Center"
+                        Background="Transparent" Click="MenuPanel_Click" Content="详细" Cursor="Hand"
+                        Foreground="#81d4fa" Grid.Row="2" FontSize="12">
+                    <TextBlock TextDecorations="Underline"/>
+                </Button>
+                
+                <TextBlock x:Name="till" Grid.Row="1" Grid.ColumnSpan="5" Foreground="#ff4c4c"
+                           Text="宠物已经生病, 通过服用药物可以恢复" TextWrapping="Wrap" FontSize="12"/>
+                <TextBlock x:Name="tfun" Grid.Row="1" Grid.ColumnSpan="5" Foreground="#4caf50"
+                           Text="已关闭数据计算, 可放心挂机" TextWrapping="Wrap" FontSize="12"/>
+                
+                <TextBlock Grid.Row="2" VerticalAlignment="Center" Text="金钱" FontSize="12"/>
+                <TextBlock x:Name="tMoney" Grid.Row="2" Grid.Column="2" Foreground="#81d4fa"
+                           Text="$100,000" FontSize="12"/>
+                
+                <TextBlock Grid.Row="3" VerticalAlignment="Center" Text="经验" FontSize="12"/>
+                <ProgressBar x:Name="pExp" Grid.Row="3" Grid.Column="2" Height="20" VerticalAlignment="Center"
+                             CornerRadius="10" FontSize="10" Value="40" Width="200"/>
+                <TextBlock x:Name="tExp" Grid.Row="3" Grid.Column="4" HorizontalAlignment="Right"
+                           Foreground="#81d4fa" Text="x1.0" FontSize="12"/>
+                
+                <TextBlock Grid.Row="4" VerticalAlignment="Center" Text="体力" FontSize="12"/>
+                <ProgressBar x:Name="pStrength" Grid.Row="4" Grid.Column="2" Height="20" VerticalAlignment="Center"
+                             CornerRadius="10" FontSize="10" Maximum="100" Value="40" Width="200"/>
+                <TextBlock x:Name="tStrength" Grid.Row="4" Grid.Column="4" HorizontalAlignment="Right"
+                           Foreground="#81d4fa" Text="+1/t" FontSize="12"/>
+                
+                <TextBlock Grid.Row="5" VerticalAlignment="Center" Text="心情" FontSize="12"/>
+                <ProgressBar x:Name="pFeeling" Grid.Row="5" Grid.Column="2" Height="20" VerticalAlignment="Center"
+                             CornerRadius="10" FontSize="10" Maximum="100" Value="60" Width="200"/>
+                <TextBlock x:Name="tFeeling" Grid.Row="5" Grid.Column="4" HorizontalAlignment="Right"
+                           Foreground="#81d4fa" Text="+1/t" FontSize="12"/>
+                
+                <TextBlock Grid.Row="6" VerticalAlignment="Center" Text="饱腹度" FontSize="12"/>
+                <ProgressBar x:Name="pStrengthFoodMax" Grid.Row="6" Grid.Column="2" Height="20"
+                             VerticalAlignment="Center" CornerRadius="10" Background="#dddddd" Opacity="0.5" Value="90" Width="200"/>
+                <ProgressBar x:Name="pStrengthFood" Grid.Row="6" Grid.Column="2" Height="20" VerticalAlignment="Center"
+                             CornerRadius="10" Background="Transparent" Maximum="100" Value="80" Width="200"/>
+                <TextBlock x:Name="tStrengthFood" Grid.Row="6" Grid.Column="4" HorizontalAlignment="Right"
+                           Foreground="#81d4fa" Text="+1/t" FontSize="12"/>
+                
+                <TextBlock Grid.Row="7" VerticalAlignment="Center" Text="口渴度" FontSize="12"/>
+                <ProgressBar x:Name="pStrengthDrinkMax" Grid.Row="7" Grid.Column="2" Height="20"
+                             VerticalAlignment="Center" CornerRadius="10" Background="#dddddd" Opacity="0.5" Value="90" Width="200"/>
+                <ProgressBar x:Name="pStrengthDrink" Grid.Row="7" Grid.Column="2" Height="20" VerticalAlignment="Center"
+                             CornerRadius="10" Background="Transparent" Maximum="100" Value="20" Width="200"/>
+                <TextBlock x:Name="tStrengthDrink" Grid.Row="7" Grid.Column="4" HorizontalAlignment="Right"
+                           Foreground="#81d4fa" Text="+1/t" FontSize="12"/>
+            </Grid>
+        </Border>
+        
+        <Grid x:Name="ToolBarMenuContainer" IsVisible="False">
+            <Menu x:Name="ToolBarMenu" Width="500" VerticalAlignment="Bottom">
+                <MenuItem x:Name="MenuFeed" Padding="0" x:FieldModifier="public" Header="投喂"/>
+                <MenuItem x:Name="MenuPanel" Padding="0" Header="面板"/>
+                <MenuItem x:Name="MenuInteract" Padding="0" x:FieldModifier="public" Header="互动">
+                    <MenuItem Header="睡觉"/>
+                    <MenuItem x:Name="MenuStudy" Header="学习"/>
+                    <MenuItem x:Name="MenuPlay" Header="玩耍"/>
+                    <MenuItem x:Name="MenuWork" Header="工作"/>
+                </MenuItem>
+                <MenuItem x:Name="MenuDIY" Padding="0" x:FieldModifier="public" Header="自定"/>
+                <MenuItem x:Name="MenuSetting" Padding="0" x:FieldModifier="public" Header="系统">
+                    <MenuItem x:Name="MenuMODConfig" x:FieldModifier="public" Header="MOD设置" IsVisible="False"/>
+                </MenuItem>
+            </Menu>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,20 @@
+<UserControl x:Class="VPetAvalonia.App.Views.MessageBar" xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+              mc:Ignorable="d" Height="140" Width="420">
+    <!-- 桌宠形态下这是悬浮在宠物上方的对话气泡, 尺寸要小 -->
+    <Border Background="#CC2b2b2b" BorderBrush="#404040" BorderThickness="1" CornerRadius="10"
+            Margin="5" Padding="12" VerticalAlignment="Top">
+        <StackPanel>
+            <TextBlock x:Name="LName" Text="" Foreground="#81d4fa"
+                       HorizontalAlignment="Left" FontWeight="Bold" Margin="0,0,0,4" FontSize="16"/>
+            <ScrollViewer MaxHeight="90">
+                <TextBox x:Name="TText" IsReadOnly="True" TextWrapping="Wrap"
+                         FontSize="15" Foreground="White" Background="Transparent"
+                         BorderBrush="Transparent" BorderThickness="0"/>
+            </ScrollViewer>
+            <Grid x:Name="MessageBoxContent" />
+        </StackPanel>
+    </Border>
+</UserControl>

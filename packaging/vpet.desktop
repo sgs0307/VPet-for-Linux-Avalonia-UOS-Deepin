@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=VPet 桌宠
+GenericName=虚拟桌宠
+Comment=桌面虚拟宠物(统信UOS / Deepin 适配版)
+Exec=@INSTALL_DIR@/vpet.sh
+Icon=@ICON_PATH@
+Terminal=false
+Categories=Game;Amusement;
+Keywords=VPet;桌宠;虚拟宠物;pet;desktop pet;
+StartupNotify=false
+StartupWMClass=VPet-Avalonia.App

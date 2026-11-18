@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# VPet 桌宠启动器(由 install.sh 生成, 路径已写死, 不依赖 PATH)
+set -euo pipefail
+
+INSTALL_DIR="@INSTALL_DIR@"
+DOTNET_BIN="@DOTNET_BIN@"
+
+# 写死的 dotnet 不存在时(例如用户换过 SDK 路径), 依次回退查找
+if [[ ! -x "$DOTNET_BIN" ]]; then
+  for c in "$(command -v dotnet 2>/dev/null || true)" \
+           "$HOME/dotnet/dotnet" "/usr/share/dotnet/dotnet" "/usr/lib/dotnet/dotnet" \
+           "/opt/dotnet/dotnet" "/usr/bin/dotnet"; do
+    if [[ -x "$c" ]]; then DOTNET_BIN="$c"; break; fi
+  done
+fi
+
+if [[ ! -x "$DOTNET_BIN" ]]; then
+  echo "未找到 .NET 8 运行时, 请先安装 dotnet, 或用 VPET_DOTNET=/path/to/dotnet 指定。" >&2
+  exit 1
+fi
+
+export DOTNET_CLI_TELEMETRY_OPTOUT=1
+export DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
+# 内存吃紧的机器上 .NET 默认 GC 堆预留会过大, 直接 CLR 初始化失败:
+#   GC heap initialization failed with error 0x8007000E / Failed to create CoreCLR
+# 桌宠本身峰值远低于 512MB, 给个上限既省内存又避免随机启动失败。
+# 需要更大堆时可自行 export DOTNET_GCHeapHardLimit=0x40000000
+export DOTNET_GCHeapHardLimit="${DOTNET_GCHeapHardLimit:-0x20000000}"
+# 桌宠资源按程序所在目录查找, 这里固定工作目录保证任何位置启动都能找到 mod
+cd "$INSTALL_DIR"
+
+# 从桌面图标启动时没有终端, 输出全丢。留一份日志, 出问题时可回溯。
+# 只在"没有终端"时重定向; 测试/手动排查用 VPET_KEEP_STDOUT=1 保留自己的输出。
+if [[ ! -t 1 && -z "${VPET_KEEP_STDOUT:-}" ]]; then
+  LOG_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/VPet"
+  mkdir -p "$LOG_DIR" 2>/dev/null || true
+  LOG_FILE="$LOG_DIR/vpet.log"
+  if [[ -f "$LOG_FILE" ]] && [[ "$(stat -c %s "$LOG_FILE" 2>/dev/null || echo 0)" -gt 2000000 ]]; then
+    mv -f "$LOG_FILE" "$LOG_FILE.1" 2>/dev/null || true
+  fi
+  exec >>"$LOG_FILE" 2>&1
+fi
+
+# 优先用发布时生成的原生启动器; 它需要能解析到运行时, 所以先把 DOTNET_ROOT/PATH 指过去。
+# 找不到运行时时(apphost 返回 131)回退到 dotnet <dll> 方式启动。
+if [[ -x "$INSTALL_DIR/VPet-Avalonia.App" ]]; then
+  export DOTNET_ROOT="$(dirname "$DOTNET_BIN")"
+  export PATH="$DOTNET_ROOT:$PATH"
+  # 必须转发信号: 直接前台执行时, 外层 timeout / Ctrl-C / 关闭终端只杀掉了这个壳,
+  # 桌宠本体留在后台继续跑。多个实例各自定时自动保存, 会互相覆盖 ~/.local/share/VPet/save.lps
+  # (实测表现为"存档里的钱和等级莫名其妙变成天文数字或清零")。
+  "$INSTALL_DIR/VPet-Avalonia.App" "$@" &
+  child=$!
+  # 只转发 TERM/INT: 关终端发出的 HUP 不转发, 否则 nohup/后台启动会被立刻杀掉
+  trap 'kill -TERM "$child" 2>/dev/null || true' TERM INT
+  code=0
+  wait "$child" || code=$?
+  trap - TERM INT
+  if [[ "$code" -ne 131 && "$code" -ne 130 ]]; then
+    exit "$code"
+  fi
+  echo "[VPet] 原生启动器未定位到运行时, 回退到 dotnet 直接启动" >&2
+fi
+
+exec "$DOTNET_BIN" "$INSTALL_DIR/VPet-Avalonia.App.dll" "$@"

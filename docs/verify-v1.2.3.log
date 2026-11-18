@@ -1,0 +1,47 @@
+[VPet] 启动中...
+libGL error: MESA-LOADER: failed to retrieve device information
+Failed to create /root/.cache for shader cache (Permission denied)---disabling.
+[VPet] MOD 目录: /path/to/VPet/VPet-main/VPet-main/VPet-Avalonia.App/bin/Release/net8.0/mod
+[VPet] 使用宠物定义: vup.lps
+[VPet] 加载宠物: vup (默认名 萝莉斯)
+[VPet] 动画加载完成, 共 621 组, 索引 23 类
+[VPet] 读档成功: 萝莉斯 金钱=996.2 等级=2 体力=100 饱腹=99.8 口渴=39.8 心情=100 健康=100 状态=Happy
+[VPet] 食物数据加载完成: 122 种
+[VPet] 显示器: 0,0 2160x1440 缩放=1 主屏=False
+[VPet] 显示器: 2160,0 2560x1440 缩放=1.25 主屏=False
+[VPet] 窗口对准显示器: 物理(0,0) 2160x1440 逻辑 2160x1440 缩放=1
+[TEST] 食物=122 背包=4 金钱=996.2
+[VPet] 食物动画: 鸡祥如意 播放图层=eat_back_lay_2
+[VPet] 投喂: 鸡祥如意 剩余 0
+[TEST] 投喂 鸡祥如意: 饱腹 50.0->100.0, 口渴 39.8->34.8, 心情 100.0->100.0, 库存 1->0
+[TEST] 设置面板: 可见=True 控件块=12 写入=25 重读=25 一致=True 文件=True
+[TEST] 说话池: 12 次抽取去重=8 句(应 >1), 当前句="我在这儿看着你干活", 低饱腹 20 次里提到饿=6 次(应 >0)
+[TEST] 角色面板: 可见=True 区块=22 摸头计数 2->3 统计落盘=True 陪伴=0 秒
+[TEST] 物品栏: 可见=True 区块=5 过滤正餐后=3 背包件数=4
+[TEST] 捏脸: 长按区=2个(应>0) 动画=pinch/A_Start(应pinch/A_Start) 计数 2->3 体力 100.0->100.0
+[TEST] 成就: 解锁=0条(应1, ) 落盘=True 面板可见=True 面板区块=38 总数=12
+[VPet] 购买: 戒指糖 花费 2.5 余额 993.7
+[TEST] 购买 戒指糖: 金钱 996.2->993.7, 持有 3
+[TEST] 开始工作 文案: ok=True State=Work NowWork=文案 TimerIsWorking=True
+[TEST] 工作动画: 期望=workone 实际=workone/A_Start/Happy
+[TEST] 工作 6 秒: 金钱 993.70->993.70, 计时=0.10分
+[TEST] 工作 20 秒: 金钱 993.70->994.30, 经验=300.6, 体力=99.9, 饱腹=99.9, 计时=0.33分
+[VPet] 工作结束: 文案 原因=MenualStop 时长=0.3分
+[TEST] 停止后 State=Nomal NowWork=null TimerIsWorking=False
+[TEST] 停止后动画=workone/C_End
+[TEST] 睡觉后 State=Sleep
+[TEST] 唤醒后 State=Nomal
+[VPet] 读档成功: 萝莉斯 金钱=994.3 等级=2 体力=99.9 饱腹=99.9 口渴=34.7 心情=100 健康=100 状态=Happy
+[TEST] 存档往返: 金钱 994.30->994.30, 经验 300.60->300.60, 体力 99.9->99.9, 饱腹 99.9->99.9
+[TEST] 存档内容: vpet:|name#萝莉斯:|hostname#:|money#994.3:|exp#300.6:|strength#99.91:|StoreStrength#0:|strengthFood#99.8775:|StoreStrengthFood#0:|strengthDrink#34.6875:|StoreStrengthDrink#0:|feeling#100:|health#100:|likability#6.2:|mode#Happy:|
+[TEST] 菜单: 根 15 项 → 点子菜单后 可见=True 项数=15 高度=0
+[TEST] 返回根菜单: 可见=True 项数=15
+[TEST] 跨屏/边缘换屏/松手换屏: 轻量模式跳过 (VPET_SELFTEST_LIGHT=1)
+[TEST] 拖动 X 请求: 120 次位移中 0 次 (应为 0), 起始整窗 1 次, 收尾恢复 1 次, 120 次位移耗时 2ms
+[TEST] 拖动比例: 指针位移=300 宠物位移=300 (应为 300), 比例=1.00
+[TEST] 摸头弹窗: 第1次 实际 体力-2 心情+1 文案="体力-2 心情+1" | 第2次 实际 体力-2 心情+1 文案="体力-2 心情+1" (文案应分别是 -2/+1, 不能累加)
+[VPet] 食物动画: 戒指糖 播放图层=eat_back_lay_2
+[VPet] 投喂: 戒指糖 剩余 2
+[TEST] 投喂动画: 图=eat 后层=eat_back_lay_2 命中=True(必须是后层, 前层只是手部小块) 宠物尺寸 500x500 → 播放中 500x500 → 结束后 500 (播放中必须仍是 500)
+[TEST] 自检结束
+[VPet] 自动保存完成 17:29:13

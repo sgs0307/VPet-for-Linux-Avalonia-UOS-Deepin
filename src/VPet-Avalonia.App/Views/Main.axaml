@@ -1,0 +1,29 @@
+<UserControl x:Class="VPetAvalonia.App.Views.Main" xmlns="https://github.com/avaloniaui"
+              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+              mc:Ignorable="d" d:DesignHeight="500" d:DesignWidth="500"
+              Background="Transparent">
+    <!-- 背景必须保持透明: 桌宠窗口整体透明, 这里若带底色会在屏幕上留下一个方块 -->
+    <Grid Background="Transparent">
+        <Viewbox Stretch="Uniform">
+            <Grid x:Name="MainGrid" Width="500" Height="500" Background="Transparent">
+                <Grid x:Name="UIGrid_Back" Width="500" VerticalAlignment="Top" />
+
+                <Decorator x:Name="PetGrid" Height="500" VerticalAlignment="Top" Width="500" />
+
+                <Decorator x:Name="PetGrid2" Height="500" VerticalAlignment="Top" Width="500" IsVisible="False" />
+
+                <Grid x:Name="UIGrid" Width="500" VerticalAlignment="Top" />
+
+                <!-- 数值变化气泡: 贴在宠物上方 -->
+                <Border x:Name="LabelDisplay" HorizontalAlignment="Center" VerticalAlignment="Top"
+                        Margin="0,5,0,0" Padding="15,7" Background="#80000000" CornerRadius="15"
+                        IsVisible="False">
+                    <TextBlock x:Name="LabelDisplayText" Text="" TextWrapping="Wrap"
+                               Foreground="White" FontSize="22" />
+                </Border>
+            </Grid>
+        </Viewbox>
+    </Grid>
+</UserControl>

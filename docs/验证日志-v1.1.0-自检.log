@@ -1,0 +1,19 @@
+[VPet] 启动中...
+[VPet] MOD 目录: ~/.local/share/vpet/mod
+[VPet] 使用宠物定义: vup.lps
+[VPet] 加载宠物: vup (默认名 萝莉斯)
+[VPet] 动画加载完成, 共 621 组, 索引 23 类
+[VPet] 食物数据加载完成: 122 种
+[TEST] 食物=122 背包=7 金钱=1000.0
+[VPet] 投喂: 鸡祥如意 剩余 0
+[TEST] 投喂 鸡祥如意: 饱腹 50.0->100.0, 口渴 50.0->45.0, 心情 60.0->100.0, 库存 1->0
+[VPet] 购买: 戒指糖 花费 2.5 余额 997.5
+[TEST] 购买 戒指糖: 金钱 1000.0->997.5, 持有 6
+[TEST] 开始工作 文案: ok=True State=Work NowWork=文案 TimerIsWorking=True
+[TEST] 工作 6 秒: 金钱 997.50->997.50, 计时=0.10分
+[TEST] 工作 20 秒: 金钱 997.50->998.10, 经验=100.1, 体力=99.9, 饱腹=99.9, 计时=0.32分
+[VPet] 工作结束: 文案 原因=MenualStop 时长=0.3分
+[TEST] 停止后 State=Nomal NowWork=null TimerIsWorking=False
+[TEST] 睡觉后 State=Sleep
+[TEST] 唤醒后 State=Nomal
+[TEST] 自检结束
