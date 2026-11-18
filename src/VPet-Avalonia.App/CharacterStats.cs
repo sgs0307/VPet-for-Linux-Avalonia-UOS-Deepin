@@ -309,12 +309,17 @@ namespace VPetAvalonia.App
         /// <summary>把秒数说成人话: 1 小时 23 分</summary>
         public static string HumanDuration(long seconds)
         {
+            // 0 秒写成"刚刚开始"更像人话(面板上"已经陪你 0 秒"很怪)
+            if (seconds <= 0)
+                return "刚刚开始";
             if (seconds < 60)
                 return $"{seconds} 秒";
             var ts = TimeSpan.FromSeconds(seconds);
             if (ts.TotalHours < 1)
                 return $"{(int)ts.TotalMinutes} 分钟";
-            return $"{(int)ts.TotalHours} 小时 {ts.Minutes} 分钟";
+            if (ts.TotalHours < 24)
+                return $"{(int)ts.TotalHours} 小时 {ts.Minutes} 分钟";
+            return $"{(int)ts.TotalDays} 天 {ts.Hours} 小时";
         }
     }
 }

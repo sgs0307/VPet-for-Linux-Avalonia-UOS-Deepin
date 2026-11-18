@@ -26,10 +26,8 @@ namespace VPetAvalonia.App.Views
         internal CharacterStats Stats = new();
 
         private Border? _settingsPanel;
-        private Border? _charPanel;
         private StackPanel? _settingsBody;
-        private StackPanel? _charBody;
-        private DispatcherTimer? _charRefresh;
+        // 角色面板的字段与实现挪到 MainWindow.CharacterPanel.cs (v1.4.0 重做 UI)
 
         private static readonly IBrush PanelBg = Brush("#F22B2B2B");
         private static readonly IBrush PanelBorder = Brush("#555555");
@@ -68,10 +66,14 @@ namespace VPetAvalonia.App.Views
         /// 同上, 额外给一个"固定头部"(不随内容滚动) 和 "固定底部"(翻页/统计条)。
         /// 商店的搜索框如果塞进可滚动区, 往下翻两屏就找不到了;
         /// 翻页按钮同理, 塞进列表末尾会随内容滚出视野。
+        ///
+        /// showTitle=false / closeButton=false 供"自己画头部"的面板用(角色面板):
+        /// 它把标题、状态徽章、页签和右上角 × 都放进固定头部, 不需要外壳再画一遍。
         /// </summary>
         private Border CreateOverlayPanel(string title, double width, double height,
                                           out StackPanel body, out StackPanel header, out StackPanel footer,
-                                          double headerHeight = 0, double footerHeight = 0)
+                                          double headerHeight = 0, double footerHeight = 0,
+                                          bool showTitle = true, bool closeButton = true)
         {
             var root = new Border
             {
@@ -90,15 +92,18 @@ namespace VPetAvalonia.App.Views
             var headGrid = new Grid();
             headGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
             headGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            var titleText = new TextBlock
+            if (showTitle)
             {
-                Text = title,
-                Foreground = TextMain,
-                FontSize = 18,
-                FontWeight = FontWeight.Bold,
-            };
-            headGrid.Children.Add(titleText);
-            stack.Children.Add(headGrid);
+                var titleText = new TextBlock
+                {
+                    Text = title,
+                    Foreground = TextMain,
+                    FontSize = 18,
+                    FontWeight = FontWeight.Bold,
+                };
+                headGrid.Children.Add(titleText);
+                stack.Children.Add(headGrid);
+            }
 
             header = new StackPanel { Margin = new Thickness(0, 4, 0, 2) };
             stack.Children.Add(header);
@@ -115,21 +120,24 @@ namespace VPetAvalonia.App.Views
             footer = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
             stack.Children.Add(footer);
 
-            var close = new Button
+            if (closeButton)
             {
-                Content = "关闭",
-                HorizontalAlignment = HorizontalAlignment.Right,
-                Margin = new Thickness(0, 8, 0, 0),
-                Background = BtnBg,
-                Foreground = Brushes.White,
-                Padding = new Thickness(14, 4),
-            };
-            close.Click += (s, e) =>
-            {
-                root.IsVisible = false;
-                UpdateClickThrough();
-            };
-            stack.Children.Add(close);
+                var close = new Button
+                {
+                    Content = "关闭",
+                    HorizontalAlignment = HorizontalAlignment.Right,
+                    Margin = new Thickness(0, 8, 0, 0),
+                    Background = BtnBg,
+                    Foreground = Brushes.White,
+                    Padding = new Thickness(14, 4),
+                };
+                close.Click += (s, e) =>
+                {
+                    root.IsVisible = false;
+                    UpdateClickThrough();
+                };
+                stack.Children.Add(close);
+            }
 
             root.Child = stack;
             // 面板刚显示时 Bounds 还是 0, 布局完成后要重算输入区域
@@ -618,142 +626,5 @@ namespace VPetAvalonia.App.Views
 
         #endregion
 
-        #region 角色面板
-
-        /// <summary>
-        /// 打开角色面板
-        /// </summary>
-        private void ShowCharacterPanel()
-        {
-            if (_charPanel == null)
-            {
-                _charPanel = CreateOverlayPanel("角色面板", 400, 560, out _charBody);
-                PetCanvas.Children.Add(_charPanel);
-
-                // 面板开着时每秒刷新一次, 陪伴时长/数值会走字
-                _charRefresh = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
-                _charRefresh.Tick += (s, e) =>
-                {
-                    if (_charPanel is { IsVisible: true })
-                        RefreshCharacterPanel();
-                };
-            }
-            ShowOverlay(_charPanel, RefreshCharacterPanel);
-            _charRefresh?.Start();
-        }
-
-        private void RefreshCharacterPanel()
-        {
-            var core = MainDisplay.Core;
-            var save = core?.Save;
-            if (_charBody == null || save == null)
-                return;
-
-            _charBody.Children.Clear();
-
-            // ---- 概要 ----
-            var days = Math.Max(1, (int)(DateTime.Now.Date - Stats.FirstSeen.Date).TotalDays + 1);
-            var head = new StackPanel { Margin = new Thickness(0, 2, 0, 2) };
-            head.Children.Add(new TextBlock
-            {
-                Text = $"{save.Name}  Lv {save.Level}    {StateText()}",
-                Foreground = Brushes.White,
-                FontSize = 17,
-                FontWeight = FontWeight.Bold,
-            });
-            head.Children.Add(new TextBlock
-            {
-                Text = $"相伴第 {days} 天    金钱 ${save.Money:0.#}    背包 {core!.Inventory?.TotalCount ?? 0} 份",
-                Foreground = TextDim,
-                FontSize = 12,
-                Margin = new Thickness(0, 2, 0, 0),
-            });
-            _charBody.Children.Add(head);
-
-            // ---- 属性 ----
-            _charBody.Children.Add(MakeSection("属性"));
-            var need = save.LevelUpNeed();
-            _charBody.Children.Add(MakeMeter("经验", save.Exp, need, $"{save.Exp:F0}/{need:F0}"));
-            _charBody.Children.Add(MakeMeter("体力", save.Strength, save.StrengthMax, $"{save.Strength:F0}/{save.StrengthMax:F0}"));
-            _charBody.Children.Add(MakeMeter("饱腹", save.StrengthFood, save.StrengthMax, $"{save.StrengthFood:F0}"));
-            _charBody.Children.Add(MakeMeter("口渴", save.StrengthDrink, save.StrengthMax, $"{save.StrengthDrink:F0}"));
-            _charBody.Children.Add(MakeMeter("心情", save.Feeling, save.FeelingMax, $"{save.Feeling:F0}/{save.FeelingMax:F0}"));
-            _charBody.Children.Add(MakeMeter("健康", save.Health, 100, $"{save.Health:F0}"));
-            _charBody.Children.Add(MakeMeter("好感度", save.Likability, save.LikabilityMax, $"{save.Likability:F0}/{save.LikabilityMax:F0}"));
-
-            // ---- 能力 ----
-            _charBody.Children.Add(MakeSection("能力"));
-            _charBody.Children.Add(MakeRow("体力上限", new TextBlock { Text = $"{save.StrengthMax:F0}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("心情上限", new TextBlock { Text = $"{save.FeelingMax:F0}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("好感度上限", new TextBlock { Text = $"{save.LikabilityMax:F0}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("经验加成", new TextBlock { Text = $"×{save.ExpBonus:F2}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("升级所需", new TextBlock { Text = $"{need:F0} 经验", Foreground = TextAccent, FontSize = 13 }));
-
-            // ---- 陪伴记录 ----
-            _charBody.Children.Add(MakeSection("陪伴记录"));
-            _charBody.Children.Add(MakeRow("摸头 / 摸身体", new TextBlock { Text = $"{Stats.TouchCount} 次", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("捏脸", new TextBlock { Text = $"{Stats.PinchCount} 次", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("投喂", new TextBlock { Text = $"{Stats.FeedCount} 次", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("已经陪你", new TextBlock
-            {
-                Text = CharacterStats.HumanDuration(Stats.PlaySeconds),
-                Foreground = TextAccent,
-                FontSize = 13,
-            }));
-            _charBody.Children.Add(MakeRow("一起干活", new TextBlock { Text = CharacterStats.HumanDuration(Stats.WorkSeconds), Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("初次见面", new TextBlock
-            {
-                Text = Stats.FirstSeen.ToString("yyyy-MM-dd"),
-                Foreground = TextAccent,
-                FontSize = 13,
-            }));
-
-            // ---- 陪伴年报 (原版 winCharacterPanel 的"报告"页的简化版) ----
-            _charBody.Children.Add(MakeSection("陪伴年报"));
-            _charBody.Children.Add(MakeRow("互动总数", new TextBlock
-            {
-                Text = $"{Stats.InteractionTotal} 次",
-                Foreground = Brushes.Gold,
-                FontSize = 13,
-            }));
-            _charBody.Children.Add(MakeRow("睡得最久", new TextBlock
-            {
-                Text = CharacterStats.HumanDuration(Stats.SleepSeconds),
-                Foreground = TextAccent,
-                FontSize = 13,
-            }));
-            _charBody.Children.Add(MakeRow("完成工作", new TextBlock { Text = $"{Stats.WorkFinishCount} 次", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("最常吃", new TextBlock
-            {
-                Text = string.IsNullOrEmpty(Stats.TopFood) ? "还没吃过东西" : $"{Stats.TopFood} ×{Stats.TopFoodCount}",
-                Foreground = TextAccent,
-                FontSize = 13,
-            }));
-            _charBody.Children.Add(MakeRow("最高等级", new TextBlock { Text = $"Lv {Math.Max(Stats.MaxLevel, save.Level)}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("最有钱时", new TextBlock { Text = $"${Math.Max(Stats.MaxMoney, save.Money):0.#}", Foreground = TextAccent, FontSize = 13 }));
-            _charBody.Children.Add(MakeRow("成就", new TextBlock
-            {
-                Text = $"{Achievements.Unlocked.Count} / {Achievements.Defs.Length}",
-                Foreground = TextAccent,
-                FontSize = 13,
-            }));
-
-            _charBody.Children.Add(MakeNote("数据来自存档与本机统计文件; 统计不会随删档清空(设置 → 数据 里可单独清除)。"));
-        }
-
-        private string StateText()
-        {
-            if (MainDisplay.Core?.Save?.Mode == ModeType.Ill)
-                return "生病中";
-            return MainDisplay.State switch
-            {
-                Main.WorkingState.Work => "正在干活",
-                Main.WorkingState.Sleep => "睡觉中",
-                Main.WorkingState.Travel => "出门了",
-                _ => "发呆中",
-            };
-        }
-
-        #endregion
     }
 }

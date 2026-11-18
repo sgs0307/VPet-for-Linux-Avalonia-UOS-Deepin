@@ -140,7 +140,7 @@ namespace VPetAvalonia.App.Views
                 if (ToolBar.IsVisible)
                     ToolBar.RefreshValues();
                 if (_charPanel is { IsVisible: true })
-                    RefreshCharacterPanel();
+                    UpdateCharacterPanel();
             };
 
             RegisterTouchAreas(core);
@@ -289,7 +289,13 @@ namespace VPetAvalonia.App.Views
                 {
                     case "shop": ShowShop(); break;
                     case "items": ShowInventoryPanel(); break;
-                    case "char": ShowCharacterPanel(); break;
+                    case "char":
+                        ShowCharacterPanel();
+                        // 配合 VPET_CHAR_TAB=0|1|2 直接切到概览/记录/年报, 方便逐个截屏核对
+                        var tabEnv = Environment.GetEnvironmentVariable("VPET_CHAR_TAB");
+                        if (int.TryParse(tabEnv, out var tabIdx) && tabIdx is >= 0 and <= 2)
+                            SwitchTab(tabIdx);
+                        break;
                     case "settings": ShowSettingsPanel(); break;
                     case "ach": ShowAchievementsPanel(); break;
                     case "work": ShowWorkPanel(); break;
@@ -1119,7 +1125,58 @@ namespace VPetAvalonia.App.Views
             {
                 Console.WriteLine("[TEST] 工作面板自检失败: " + e.Message);
             }
+
+            // P12. 角色面板(v1.4.0 重做): 页签切换 / 属性条 / 低值告警 / 增量刷新
+            try
+            {
+                ShowCharacterPanel();
+                var meterCount = _charMeters.Count;          // 7 条属性
+                var tabCount = _charTabs.Count;              // 3 个页签
+
+                SwitchTab(1);
+                var recShown = _charPageRecord is { IsVisible: true } && _charPageOverview is { IsVisible: false };
+                SwitchTab(2);
+                var yearShown = _charPageYear is { IsVisible: true } && _charPageRecord is { IsVisible: false };
+                SwitchTab(0);
+                var backOk = _charPageOverview is { IsVisible: true } && _charPageYear is { IsVisible: false };
+
+                // 低值告警只对生存类属性生效; 经验和好感从 0 起步是正常状态
+                var save = MainDisplay.Core!.Save!;
+                var strengthBak = save.Strength;
+                var strengthMeter = _charMeters.FirstOrDefault(m => m.Name == "体力");
+                save.Strength = 1;
+                UpdateCharacterPanel();
+                var lowRed = FillColor(strengthMeter)?.Contains("EF5350", StringComparison.OrdinalIgnoreCase) == true;
+                save.Strength = strengthBak;
+                UpdateCharacterPanel();
+                var backNormal = FillColor(strengthMeter)?.Contains("FF8A65", StringComparison.OrdinalIgnoreCase) == true;
+                var expNoWarn = _charMeters.FirstOrDefault(m => m.Name == "经验")?.Value.Foreground?.ToString()
+                    ?.Contains("EF5350", StringComparison.OrdinalIgnoreCase) != true;
+
+                // 每秒刷新必须"只改值不重建": 否则滚动位置会跳回顶部、悬停状态被抹掉
+                var fillBefore = _charMeters[0].Fill;
+                var rowsBefore = _charPageOverview?.Children.Count ?? 0;
+                UpdateCharacterPanel();
+                var noRebuild = ReferenceEquals(fillBefore, _charMeters[0].Fill)
+                                && rowsBefore == (_charPageOverview?.Children.Count ?? 0);
+
+                if (_charPanel != null)
+                    _charPanel.IsVisible = false;
+                UpdateClickThrough();
+
+                Console.WriteLine($"[TEST] 角色面板: 属性条={meterCount}(应 7) 页签={tabCount}(应 3) " +
+                                  $"切记录={recShown} 切年报={yearShown} 回概览={backOk} " +
+                                  $"低值转红={lowRed} 恢复={backNormal} 经验不误报={expNoWarn} 增量刷新={noRebuild}");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine("[TEST] 角色面板自检失败: " + e.Message);
+            }
         }
+
+        /// <summary>取自检用的属性条填充色(拿不到时返回 null)</summary>
+        private static string? FillColor(MainWindow.CharMeter? meter)
+            => meter?.Fill.Background?.ToString();
 
         /// <summary>把列表里所有 Button 的 Content 和名字文本捞出来(自检核对"进行中/停止"用)</summary>
         private static List<string> RowTexts(StackPanel? body)
@@ -2547,7 +2604,7 @@ namespace VPetAvalonia.App.Views
             try
             {
                 _autoSaveTimer?.Stop();
-                _charRefresh?.Stop();
+                _charTimer?.Stop();
                 MainDisplay.Core?.Save?.Save();
                 MainDisplay.Core?.Inventory?.Save();
                 Stats.Save();
