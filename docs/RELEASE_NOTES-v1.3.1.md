@@ -11,9 +11,9 @@
 
 | 包 | 适用 | 大小 |
 |---|---|---|
-| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | **绝大多数 UOS / Deepin（amd64）**，含桌宠资源，解压即用 | ~1.2 GB |
-| `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 信创机器 / 鲲鹏 / 飞腾（arm64） | ~1.2 GB |
-| `VPet-UOS-v1.3.1-linux-*-nomod.tar.gz` | 已有 `mod/` 目录，或只想看程序本体 | ~110 MB |
+| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | **绝大多数 UOS / Deepin（amd64）**，含桌宠资源，解压即用 | ~990 MB |
+| `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 信创机器 / 鲲鹏 / 飞腾（arm64） | ~990 MB |
+| `VPet-UOS-v1.3.1-linux-*-nomod.tar.gz` | 已有 `mod/` 目录，或只想看程序本体 | ~9 MB |
 
 不确定自己的架构？终端里跑 `uname -m`：`x86_64` 选 x64，`aarch64` 选 arm64。
 

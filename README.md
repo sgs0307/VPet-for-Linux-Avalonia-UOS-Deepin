@@ -73,9 +73,9 @@
 
 | 包 | 说明 |
 |---|---|
-| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | 含桌宠资源，**解压即用**（约 1.2 GB） |
+| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | 含桌宠资源，**解压即用**（约 990 MB） |
 | `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
-| `...-nomod.tar.gz` | 不含桌宠资源，体积小，需自备 `mod/` 目录 |
+| `...-nomod.tar.gz` | 不含桌宠资源，约 9 MB，需自备 `mod/` 目录 |
 
 ```bash
 tar xzf VPet-UOS-v1.3.1-linux-x64-full.tar.gz
@@ -88,6 +88,8 @@ cd VPet-UOS-v1.3.1
 > 依赖 .NET 8 运行时。Release 包内**不含**运行时（体积考虑），请先装：
 > 统信 UOS / Deepin 应用商店搜「.NET」，或从 <https://dotnet.microsoft.com/download/dotnet/8.0> 下载
 > `dotnet-runtime-8.0` 的 Linux 包。安装脚本会自动探测 dotnet 路径并写死到启动器里，之后不依赖 PATH。
+> 如果 dotnet 装在非标准位置（脚本找的是 `$HOME/dotnet`、`/usr/share/dotnet`、`/opt/dotnet` 等），
+> 用 `VPET_DOTNET=/path/to/dotnet ./scripts/install.sh` 指定。
 
 ### 方式二：从源码构建
 

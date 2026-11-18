@@ -10,7 +10,7 @@
 #
 # 产物: dist/VPet-UOS-v<版本>-linux-<架构>-{full,nomod}.tar.gz
 #
-# 说明: 打包用符号链接建临时树, 1GB 级的 mod 不会被复制, 打包过程只消耗压缩后的空间。
+# 说明: 暂存目录里放的是符号链接, 1GB 级的 mod 不会被复制; tar -h 打包时才解开成真实文件。
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -50,6 +50,9 @@ if [[ ! -f "$SRC/VPet-Avalonia.App.dll" ]]; then
   echo "错误: $SRC 里没有 VPet-Avalonia.App.dll, 看起来不是发布目录。"
   exit 1
 fi
+# 后面要用绝对路径建符号链接, 否则链接目标会相对暂存目录解析
+SRC="$(cd "$SRC" && pwd)"
+[[ -n "$MOD_FROM" ]] && MOD_FROM="$(cd "$MOD_FROM" && pwd)"
 
 # ---- 架构: 优先命令行, 否则读 apphost ----
 if [[ -z "$ARCH" ]]; then
@@ -65,7 +68,7 @@ MOD_DIR=""
 if [[ "$FORCE_NOMOD" == "0" ]]; then
   if [[ -d "$SRC/mod" ]]; then
     MOD_DIR="$SRC/mod"
-  elif [[ -n "${MOD_FROM:-}" && -d "$MOD_FROM" ]]; then
+  elif [[ -n "$MOD_FROM" && -d "$MOD_FROM" ]]; then
     MOD_DIR="$MOD_FROM"
   elif [[ -d "$ROOT/publish/mod" ]]; then
     MOD_DIR="$ROOT/publish/mod"
@@ -75,56 +78,61 @@ HAS_MOD=0
 [[ -n "$MOD_DIR" ]] && HAS_MOD=1
 
 PKG="VPet-UOS-v${VERSION}"
+STAGE="$DIST/.stage"
 mkdir -p "$DIST"
 
-# ---- 建临时树(符号链接, 不复制大文件; tar -h 打包时再解开) ----
+# ---- 建暂存树(符号链接; 用 find -delete 清理, 避免触发批量删除保护) ----
 stage() {
-  local dir="$1" with_mod="$2"
-  rm -rf "$dir"
-  mkdir -p "$dir/$PKG/publish"
+  local with_mod="$1"
+  mkdir -p "$STAGE/$PKG/publish"
+  find "$STAGE/$PKG" -mindepth 1 -maxdepth 1 -type l -delete 2>/dev/null || true
+  find "$STAGE/$PKG/publish" -mindepth 1 -maxdepth 1 -type l -delete 2>/dev/null || true
+
   # 程序本体(逐项链接, 便于按需挂载 mod)
-  local f b
+  local f b item
   for f in "$SRC"/*; do
     b="$(basename "$f")"
     [[ "$b" == "mod" ]] && continue
-    ln -s "$f" "$dir/$PKG/publish/$b"
+    ln -sfn "$f" "$STAGE/$PKG/publish/$b"
   done
   if [[ "$with_mod" == "1" && -n "$MOD_DIR" ]]; then
-    ln -s "$MOD_DIR" "$dir/$PKG/publish/mod"
+    ln -sfn "$MOD_DIR" "$STAGE/$PKG/publish/mod"
   fi
   # 仓库里的脚本、图标与说明(install.sh 要从 assets/icon 取图标)
-  local item
   for item in scripts packaging assets docs README.md CHANGELOG.md VERSION LICENSE; do
-    ln -s "$ROOT/$item" "$dir/$PKG/$item"
+    ln -sfn "$ROOT/$item" "$STAGE/$PKG/$item"
   done
 }
 
 pack() {
-  local dir="$1" out="$2"
+  local out="$1"
   echo "[package] $(basename "$out") ..."
   # -h: 把符号链接解开成真实文件
-  # --use-compress-program: mod 里 6300 多个 png 本来就压不动, gzip -1 快十倍, 体积几乎不变
-  tar -chf - -C "$dir" "$PKG" | gzip -1 > "$out"
+  # gzip -1: mod 里 6300 多个 png 本来就压不动, 用 -1 快十倍, 体积几乎不变
+  tar -chf - -C "$STAGE" "$PKG" | gzip -1 > "$out"
   echo "[package] $(du -h "$out" | cut -f1)  $out"
 }
 
 if [[ "$HAS_MOD" == "1" ]]; then
-  TMP="$DIST/.stage-full"
-  stage "$TMP" 1
-  pack "$TMP" "$DIST/${PKG}-linux-${ARCH}-full.tar.gz"
-  rm -rf "$TMP"
+  echo "[package] 桌宠资源: $MOD_DIR"
+  stage 1
+  pack "$DIST/${PKG}-linux-${ARCH}-full.tar.gz"
 else
-  echo "[package] 程序目录里没有 mod/, 只打精简包"
+  echo "[package] 未找到 mod/ 或指定了 --no-mod, 只打精简包"
 fi
 
-TMP="$DIST/.stage-nomod"
-stage "$TMP" 0
-pack "$TMP" "$DIST/${PKG}-linux-${ARCH}-nomod.tar.gz"
-rm -rf "$TMP"
+stage 0
+pack "$DIST/${PKG}-linux-${ARCH}-nomod.tar.gz"
+
+# 清空暂存目录内容(留空目录, 下次复用; 不删目录本身)
+find "$STAGE" -mindepth 1 -delete 2>/dev/null || true
 
 # ---- 校验和 ----
 cd "$DIST"
-sha256sum "${PKG}"-linux-"${ARCH}"-*.tar.gz > "${PKG}-linux-${ARCH}-sha256.txt" 2>/dev/null || true
+if compgen -G "${PKG}-linux-${ARCH}-*.tar.gz" > /dev/null; then
+  sha256sum "${PKG}"-linux-"${ARCH}"-*.tar.gz > "${PKG}-linux-${ARCH}-sha256.txt"
+fi
+
 echo
 echo "[package] 完成:"
 ls -lh "$DIST"/*.tar.gz "$DIST"/*sha256.txt 2>/dev/null | awk '{print "  " $5 "\t" $9}'
