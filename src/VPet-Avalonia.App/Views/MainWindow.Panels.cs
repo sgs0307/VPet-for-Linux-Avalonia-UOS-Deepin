@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -52,28 +53,53 @@ namespace VPetAvalonia.App.Views
         }
 
         /// <summary>
-        /// 面板统一外观: 标题 + 可滚动内容 + 关闭按钮
+        /// 面板统一外观: 标题(可带副标题) + 固定头部 + 可滚动内容 + 固定底部。
         /// </summary>
         private Border CreateOverlayPanel(string title, double width, double height, out StackPanel body)
-            => CreateOverlayPanel(title, width, height, out body, out _, out _, 0, 0);
+        {
+            StackPanel header, footer;
+            TextBlock? subtitle;
+            return CreatePanel(title, width, height, out body, out header, out footer, out subtitle);
+        }
 
         private Border CreateOverlayPanel(string title, double width, double height,
                                           out StackPanel body, out StackPanel header,
                                           double headerHeight = 0)
-            => CreateOverlayPanel(title, width, height, out body, out header, out _, headerHeight, 0);
+        {
+            StackPanel footer;
+            TextBlock? subtitle;
+            return CreatePanel(title, width, height, out body, out header, out footer, out subtitle,
+                               headerHeight, 0);
+        }
 
-        /// <summary>
-        /// 同上, 额外给一个"固定头部"(不随内容滚动) 和 "固定底部"(翻页/统计条)。
-        /// 商店的搜索框如果塞进可滚动区, 往下翻两屏就找不到了;
-        /// 翻页按钮同理, 塞进列表末尾会随内容滚出视野。
-        ///
-        /// showTitle=false / closeButton=false 供"自己画头部"的面板用(角色面板):
-        /// 它把标题、状态徽章、页签和右上角 × 都放进固定头部, 不需要外壳再画一遍。
-        /// </summary>
         private Border CreateOverlayPanel(string title, double width, double height,
                                           out StackPanel body, out StackPanel header, out StackPanel footer,
-                                          double headerHeight = 0, double footerHeight = 0,
-                                          bool showTitle = true, bool closeButton = true)
+                                          double headerHeight = 0, double footerHeight = 0)
+        {
+            TextBlock? subtitle;
+            return CreatePanel(title, width, height, out body, out header, out footer, out subtitle,
+                               headerHeight, footerHeight);
+        }
+
+        /// <summary>
+        /// 真正的实现。
+        ///
+        /// v1.5.0 统一外观的三处改动:
+        ///   · 关闭改成右上角圆形 ✕, 不再在底部挂一个占满整行的大「关闭」按钮
+        ///     (角色面板早就是这个样子, 其它面板一直没跟上, 并排打开像两个软件)
+        ///   · 标题下面可以带一行灰色副标题(subtitle), 放"余额/共 N 项/第几页"这类
+        ///     会变的状态 —— 比在列表顶上塞一行金色小字更稳, 也不会随列表滚走
+        ///   · 滚动区高度按"减掉 ✕ 行与固定区"重算(原先按底部按钮还在时算的, 会白白
+        ///     空出一截, 现在把那一截还给内容)
+        ///
+        /// showTitle=false / showClose=false 供"自己画头部"的面板用(角色面板):
+        /// 它把标题、状态徽章、页签和右上角 ✕ 都放进固定头部, 不需要外壳再画一遍。
+        /// </summary>
+        private Border CreatePanel(string title, double width, double height,
+                                   out StackPanel body, out StackPanel header, out StackPanel footer,
+                                   out TextBlock? subtitle,
+                                   double headerHeight = 0, double footerHeight = 0,
+                                   bool showTitle = true, bool showClose = true)
         {
             var root = new Border
             {
@@ -88,56 +114,61 @@ namespace VPetAvalonia.App.Views
             };
 
             var stack = new StackPanel();
+            subtitle = null;
 
-            var headGrid = new Grid();
-            headGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            headGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
             if (showTitle)
             {
-                var titleText = new TextBlock
+                var headGrid = new Grid();
+                headGrid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+                headGrid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+
+                var titleBox = new StackPanel();
+                titleBox.Children.Add(new TextBlock
                 {
                     Text = title,
                     Foreground = TextMain,
                     FontSize = 18,
                     FontWeight = FontWeight.Bold,
+                });
+                subtitle = new TextBlock
+                {
+                    Text = "",
+                    Foreground = TextDim,
+                    FontSize = 11,
+                    Margin = new Thickness(0, 1, 0, 0),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
                 };
-                headGrid.Children.Add(titleText);
+                titleBox.Children.Add(subtitle);
+                headGrid.Children.Add(titleBox);
+
+                if (showClose)
+                {
+                    var close = UiHeaderClose(() =>
+                    {
+                        root.IsVisible = false;
+                        UpdateClickThrough();
+                    });
+                    Grid.SetColumn(close, 1);
+                    headGrid.Children.Add(close);
+                }
+
                 stack.Children.Add(headGrid);
             }
 
-            header = new StackPanel { Margin = new Thickness(0, 4, 0, 2) };
+            header = new StackPanel { Margin = new Thickness(0, 6, 0, 2) };
             stack.Children.Add(header);
 
             body = new StackPanel { Margin = new Thickness(0, 2, 0, 0) };
             stack.Children.Add(new ScrollViewer
             {
-                // 减掉头部/底部高度, 否则固定区 + 滚动区一起把"关闭"按钮推出面板
-                MaxHeight = Math.Max(120, height - 100 - headerHeight - footerHeight),
+                // 减掉标题行 / 固定头部 / 固定底部, 否则固定区会把内容顶出面板
+                MaxHeight = Math.Max(140, height - 76 - headerHeight - footerHeight),
                 Content = body,
                 VerticalScrollBarVisibility = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
             });
 
             footer = new StackPanel { Margin = new Thickness(0, 4, 0, 0) };
             stack.Children.Add(footer);
-
-            if (closeButton)
-            {
-                var close = new Button
-                {
-                    Content = "关闭",
-                    HorizontalAlignment = HorizontalAlignment.Right,
-                    Margin = new Thickness(0, 8, 0, 0),
-                    Background = BtnBg,
-                    Foreground = Brushes.White,
-                    Padding = new Thickness(14, 4),
-                };
-                close.Click += (s, e) =>
-                {
-                    root.IsVisible = false;
-                    UpdateClickThrough();
-                };
-                stack.Children.Add(close);
-            }
 
             root.Child = stack;
             // 面板刚显示时 Bounds 还是 0, 布局完成后要重算输入区域
@@ -150,11 +181,11 @@ namespace VPetAvalonia.App.Views
         }
 
         /// <summary>
-        /// 一行"标签 | 控件"
+        /// 一行"标签 | 控件"(放在 UiFieldGroup 卡片里, 本身不带底板)
         /// </summary>
         private static Control MakeRow(string label, Control right, string? hint = null)
         {
-            var panel = new StackPanel { Margin = new Thickness(0, 3, 0, 3) };
+            var panel = new StackPanel { Margin = new Thickness(0, 4, 0, 4) };
 
             var row = new Grid();
             row.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
@@ -163,8 +194,8 @@ namespace VPetAvalonia.App.Views
             row.Children.Add(new TextBlock
             {
                 Text = label,
-                Foreground = TextDim,
-                FontSize = 14,
+                Foreground = TextMain,
+                FontSize = 13,
                 VerticalAlignment = VerticalAlignment.Center,
             });
             Grid.SetColumn(right, 1);
@@ -177,195 +208,185 @@ namespace VPetAvalonia.App.Views
                 panel.Children.Add(new TextBlock
                 {
                     Text = hint,
-                    Foreground = Brush("#888888"),
+                    Foreground = UiFaint,
                     FontSize = 11,
                     TextWrapping = TextWrapping.Wrap,
-                    Margin = new Thickness(0, 1, 0, 0),
+                    Margin = new Thickness(0, 2, 0, 0),
                 });
             }
             return panel;
         }
 
         /// <summary>
-        /// 开关: 点一下切换, 文案跟着变（不用 CheckBox, 无主题环境下更稳）
+        /// 开关: 胶囊形状, 点一下切换, 开=绿 关=灰（不用 CheckBox, 无主题环境下更稳）
         /// </summary>
         private static Control MakeToggle(Func<bool> get, Action<bool> set, string onText = "已开启", string offText = "已关闭")
         {
+            var text = new TextBlock { FontSize = 11, VerticalAlignment = VerticalAlignment.Center };
             var border = new Border
             {
                 CornerRadius = new CornerRadius(6),
-                Padding = new Thickness(14, 5),
-                Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+                Padding = new Thickness(11, 4),
+                Cursor = new Cursor(StandardCursorType.Hand),
+                Child = text,
             };
-            var text = new TextBlock { FontSize = 13, Foreground = Brushes.White };
 
-            void Refresh()
+            var on = get();
+            void Paint(bool isOn)
             {
-                var on = get();
-                text.Text = on ? onText : offText;
-                border.Background = on ? Brush("#AA2E7D32") : Brush("#AA555555");
+                on = isOn;
+                text.Text = isOn ? onText : offText;
+                text.Foreground = isOn ? Brushes.White : TextDim;
+                border.Background = Brush(isOn ? BtnGreen : "#55333333");
             }
 
-            border.Child = text;
+            Paint(on);
+            border.PointerEntered += (s, e) => border.Background = Brush(on ? BtnGreenHover : "#77444444");
+            border.PointerExited += (s, e) => border.Background = Brush(on ? BtnGreen : "#55333333");
             border.PointerPressed += (s, e) =>
             {
                 e.Handled = true;
-                set(!get());
-                Refresh();
+                set(!on);
+                Paint(!on);
             };
-            Refresh();
             return border;
         }
 
         /// <summary>
-        /// 步进器: [-] 数值 [+] , 自动夹紧范围
+        /// 步进器: [-] 数值 [+]，圆角胶囊按钮（不用 Button, 免得退化成系统灰块）
         /// </summary>
         private static Control MakeStepper(Func<int> get, Action<int> set, int step, int min, int max,
                                            Func<int, string> format)
         {
-            var panel = new StackPanel { Orientation = Orientation.Horizontal };
+            var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
 
             var value = new TextBlock
             {
                 Foreground = TextAccent,
-                FontSize = 14,
-                Width = 78,
+                FontSize = 13,
+                FontWeight = FontWeight.Bold,
+                Width = 72,
                 TextAlignment = TextAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
 
-            Button MakeBtn(string caption)
+            Border StepBtn(string caption, Action act)
             {
-                var b = new Button
+                var t = new TextBlock
                 {
-                    Content = caption,
-                    Width = 28,
-                    Height = 26,
-                    Padding = new Thickness(0),
-                    Background = Brush("#AA444444"),
+                    Text = caption,
+                    FontSize = 13,
                     Foreground = Brushes.White,
-                    HorizontalContentAlignment = HorizontalAlignment.Center,
-                    VerticalContentAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                };
+                var b = new Border
+                {
+                    Width = 26,
+                    Height = 24,
+                    CornerRadius = new CornerRadius(6),
+                    Background = Brush("#AA444444"),
+                    Cursor = new Cursor(StandardCursorType.Hand),
+                    Child = t,
+                };
+                b.PointerEntered += (s, e) => b.Background = Brush("#CC555555");
+                b.PointerExited += (s, e) => b.Background = Brush("#AA444444");
+                b.PointerPressed += (s, e) =>
+                {
+                    e.Handled = true;
+                    act();
                 };
                 return b;
             }
 
-            var minus = MakeBtn("−");
-            var plus = MakeBtn("+");
-
             void Refresh() => value.Text = format(get());
 
-            minus.Click += (s, e) => { set(Math.Max(min, get() - step)); Refresh(); };
-            plus.Click += (s, e) => { set(Math.Min(max, get() + step)); Refresh(); };
-
-            panel.Children.Add(minus);
+            panel.Children.Add(StepBtn("−", () =>
+            {
+                set(Math.Max(min, get() - step));
+                Refresh();
+            }));
             panel.Children.Add(value);
-            panel.Children.Add(plus);
+            panel.Children.Add(StepBtn("+", () =>
+            {
+                set(Math.Min(max, get() + step));
+                Refresh();
+            }));
             Refresh();
             return panel;
         }
 
         /// <summary>
-        /// 属性条: 名称 + 进度 + 数值
+        /// 只读属性条(成就进度等)。转给统一组件, 保持调用方签名不变。
         /// </summary>
-        private static Control MakeMeter(string label, double value, double max, string valueText)
-        {
-            var row = new Grid { Margin = new Thickness(0, 3, 0, 3) };
-            row.ColumnDefinitions.Add(new ColumnDefinition(52, GridUnitType.Pixel));
-            row.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            row.ColumnDefinitions.Add(new ColumnDefinition(74, GridUnitType.Pixel));
+        private static Control MakeMeter(string label, double value, double max, string valueText,
+                                         IBrush? accent = null)
+            => UiMeter(label, value, max, valueText, accent);
 
-            row.Children.Add(new TextBlock
-            {
-                Text = label,
-                Foreground = TextDim,
-                FontSize = 13,
-                VerticalAlignment = VerticalAlignment.Center,
-            });
-
-            var bar = new ProgressBar
-            {
-                Minimum = 0,
-                Maximum = 100,
-                Value = max > 0 ? Math.Max(0, Math.Min(100, value / max * 100)) : 0,
-                Height = 10,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(4, 0),
-            };
-            Grid.SetColumn(bar, 1);
-            row.Children.Add(bar);
-
-            var txt = new TextBlock
-            {
-                Text = valueText,
-                Foreground = TextAccent,
-                FontSize = 13,
-                HorizontalAlignment = HorizontalAlignment.Right,
-                VerticalAlignment = VerticalAlignment.Center,
-            };
-            Grid.SetColumn(txt, 2);
-            row.Children.Add(txt);
-            return row;
-        }
-
-        private static Control MakeSection(string title)
-        {
-            return new TextBlock
-            {
-                Text = title,
-                Foreground = Brush("#FFB74D"),
-                FontSize = 13,
-                FontWeight = FontWeight.Bold,
-                Margin = new Thickness(0, 12, 0, 2),
-            };
-        }
+        private static Control MakeSection(string title) => UiSection(title);
 
         private static Control MakeNote(string text, IBrush? brush = null)
         {
             return new TextBlock
             {
                 Text = text,
-                Foreground = brush ?? Brush("#888888"),
+                Foreground = brush ?? UiFaint,
                 FontSize = 11,
                 TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 6, 0, 0),
+                Margin = new Thickness(2, 6, 2, 0),
             };
         }
 
         /// <summary>
-        /// 普通按钮(执行一个动作)。confirm=true 时第一次点击只是"上膛", 3 秒内再点一次才真执行
+        /// 普通动作按钮(执行一个动作)。confirm=true 时第一次点击只是"上膛", 4 秒内再点一次才真执行
         /// —— 桌宠面板没有系统对话框, 危险操作(清统计)不能用一问一答, 用二次点击最省事。
+        /// 形状与列表里的购买/使用按钮一致(圆角胶囊), 不再用系统 Button。
         /// </summary>
-        private Control MakeActionButton(string text, Action act, bool confirm = false)
+        private Control MakeActionPill(string text, Action act, bool confirm = false)
         {
-            var btn = new Button
+            var label = new TextBlock
             {
-                Content = text,
-                FontSize = 12,
-                Padding = new Thickness(12, 3),
-                Background = BtnBg,
+                Text = text,
+                FontSize = 11,
                 Foreground = Brushes.White,
+                VerticalAlignment = VerticalAlignment.Center,
+            };
+            var pill = new Border
+            {
+                CornerRadius = new CornerRadius(6),
+                Padding = new Thickness(11, 4),
+                Background = Brush(BtnCyan),
+                Cursor = new Cursor(StandardCursorType.Hand),
+                Child = label,
             };
 
             var armed = false;
             DispatcherTimer? timer = null;
+
+            void Paint(string bg)
+            {
+                pill.Background = Brush(bg);
+            }
 
             void Disarm()
             {
                 armed = false;
                 timer?.Stop();
                 timer = null;
-                btn.Content = text;
-                btn.Background = BtnBg;
+                label.Text = text;
+                Paint(BtnCyan);
             }
 
-            btn.Click += (s, e) =>
+            pill.PointerEntered += (s, e) => Paint(armed ? BtnRedHover : BtnCyanHover);
+            pill.PointerExited += (s, e) => Paint(armed ? BtnRed : BtnCyan);
+            pill.PointerPressed += (s, e) =>
             {
+                e.Handled = true;
                 if (confirm && !armed)
                 {
                     armed = true;
-                    btn.Content = "再点一次确认";
-                    btn.Background = Brush("#AAC62828");
+                    label.Text = "再点一次确认";
+                    Paint(BtnRed);
                     timer?.Stop();
                     timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(4) };
                     timer.Tick += (a, b) => Disarm();
@@ -384,7 +405,7 @@ namespace VPetAvalonia.App.Views
                     MainDisplay.ShowBubble("操作失败: " + ex.Message);
                 }
             };
-            return btn;
+            return pill;
         }
 
         /// <summary>在文件管理器里打开存档目录</summary>
@@ -463,7 +484,7 @@ namespace VPetAvalonia.App.Views
         {
             if (_settingsPanel == null)
             {
-                _settingsPanel = CreateOverlayPanel("设置", 380, 520, out _settingsBody);
+                _settingsPanel = CreateOverlayPanel("设置", 440, 640, out _settingsBody);
                 PetCanvas.Children.Add(_settingsPanel);
             }
             ShowOverlay(_settingsPanel, RefreshSettingsPanel);
@@ -484,8 +505,8 @@ namespace VPetAvalonia.App.Views
             }
 
             // ---- 数值计算 ----
-            _settingsBody.Children.Add(MakeSection("数据计算"));
-            _settingsBody.Children.Add(MakeRow("数据计算", MakeToggle(
+            var gCalc = UiFieldGroup(_settingsBody, "数据计算");
+            gCalc.Children.Add(MakeRow("启用计算", MakeToggle(
                 () => Settings.EnableFunction,
                 v =>
                 {
@@ -494,7 +515,7 @@ namespace VPetAvalonia.App.Views
                     Persist();
                 }), "关掉之后体力/饱腹/心情都不再变化, 适合挂机看桌宠"));
 
-            _settingsBody.Children.Add(MakeRow("计算间隔", MakeStepper(
+            gCalc.Children.Add(MakeRow("计算间隔", MakeStepper(
                 () => Settings.LogicIntervalSec,
                 v =>
                 {
@@ -504,7 +525,7 @@ namespace VPetAvalonia.App.Views
                 }, 5, GameSettings.MinInterval, GameSettings.MaxInterval, v => v + " 秒"),
                 "每隔多久跑一次数值结算, 默认 15 秒"));
 
-            _settingsBody.Children.Add(MakeRow("互动周期", MakeStepper(
+            gCalc.Children.Add(MakeRow("互动周期", MakeStepper(
                 () => Settings.InteractionCycle,
                 v =>
                 {
@@ -514,7 +535,7 @@ namespace VPetAvalonia.App.Views
                 }, 5, GameSettings.MinCycle, GameSettings.MaxCycle, v => v + " 周期"),
                 "越小宠物越爱自己动"));
 
-            _settingsBody.Children.Add(MakeRow("自动保存", MakeStepper(
+            gCalc.Children.Add(MakeRow("自动保存", MakeStepper(
                 () => Settings.AutoSaveMinutes,
                 v =>
                 {
@@ -524,8 +545,8 @@ namespace VPetAvalonia.App.Views
                 }, 5, 0, GameSettings.MaxAutoSave, v => v <= 0 ? "关闭" : v + " 分钟")));
 
             // ---- 说话 ----
-            _settingsBody.Children.Add(MakeSection("说话"));
-            _settingsBody.Children.Add(MakeRow("随机说话", MakeToggle(
+            var gSay = UiFieldGroup(_settingsBody, "说话");
+            gSay.Children.Add(MakeRow("随机说话", MakeToggle(
                 () => Settings.SayEnabled,
                 v =>
                 {
@@ -533,7 +554,7 @@ namespace VPetAvalonia.App.Views
                     Persist();
                 })));
 
-            _settingsBody.Children.Add(MakeRow("说话频率", MakeStepper(
+            gSay.Children.Add(MakeRow("说话频率", MakeStepper(
                 () => Settings.SayPeriod,
                 v =>
                 {
@@ -542,7 +563,7 @@ namespace VPetAvalonia.App.Views
                 }, 1, GameSettings.MinSayPeriod, GameSettings.MaxSayPeriod, v => $"{v} 周期"),
                 "每隔几个计算周期试一次; 数字越小话越多"));
 
-            _settingsBody.Children.Add(MakeRow("气泡停留", MakeStepper(
+            gSay.Children.Add(MakeRow("气泡停留", MakeStepper(
                 () => Settings.BubbleSeconds,
                 v =>
                 {
@@ -553,8 +574,8 @@ namespace VPetAvalonia.App.Views
                 "说话/提示气泡多久自动消失"));
 
             // ---- 行为 ----
-            _settingsBody.Children.Add(MakeSection("行为"));
-            _settingsBody.Children.Add(MakeRow("自己走动", MakeToggle(
+            var gAct = UiFieldGroup(_settingsBody, "行为");
+            gAct.Children.Add(MakeRow("自己走动", MakeToggle(
                 () => Settings.AllowRandomMove,
                 v =>
                 {
@@ -565,8 +586,8 @@ namespace VPetAvalonia.App.Views
                 "关掉后宠物不会自己离开原位(拖它还是会走)"));
 
             // ---- 数据 ----
-            _settingsBody.Children.Add(MakeSection("数据"));
-            _settingsBody.Children.Add(MakeRow("备份存档", MakeActionButton("立即备份", () =>
+            var gData = UiFieldGroup(_settingsBody, "数据");
+            gData.Children.Add(MakeRow("备份存档", MakeActionPill("立即备份", () =>
             {
                 var dir = SaveBackup.Create(out var n);
                 MainDisplay.ShowBubble(dir == null
@@ -577,15 +598,15 @@ namespace VPetAvalonia.App.Views
             }), $"把存档/背包/统计复制到 backup/ 下, 只保留最近 {SaveBackup.KeepCount} 份"
                 + $"(现有 {SaveBackup.Count()} 份)"));
 
-            _settingsBody.Children.Add(MakeRow("数据目录", MakeActionButton("打开", OpenDataDir),
+            gData.Children.Add(MakeRow("数据目录", MakeActionPill("打开", OpenDataDir),
                 "在文件管理器里打开存档所在目录"));
 
-            _settingsBody.Children.Add(MakeRow("陪伴统计", MakeActionButton("清除", ResetStats, confirm: true),
+            gData.Children.Add(MakeRow("陪伴统计", MakeActionPill("清除", ResetStats, confirm: true),
                 "只清 stats.txt(陪伴时长/次数/纪录), 不影响等级金钱和背包"));
 
             // ---- 系统 ----
-            _settingsBody.Children.Add(MakeSection("系统"));
-            _settingsBody.Children.Add(MakeRow("开机自启", MakeToggle(
+            var gSys = UiFieldGroup(_settingsBody, "系统");
+            gSys.Children.Add(MakeRow("开机自启", MakeToggle(
                 () => Settings.AutoStart,
                 v =>
                 {
@@ -594,11 +615,13 @@ namespace VPetAvalonia.App.Views
                     Persist();
                 }, onText: "已加入自启动", offText: "未加入")));
 
-            _settingsBody.Children.Add(MakeNote("关于: VPet Linux (Avalonia) " + AppInfo.Version +
-                                              $" · 食物 {MainDisplay.Core?.Foods.Count ?? 0} 种" +
-                                              $" · 背包 {MainDisplay.Core?.Inventory?.TotalCount ?? 0} 件"));
-            _settingsBody.Children.Add(MakeNote("自定义台词: " + SpeechPool.UserSpeechPath));
-            _settingsBody.Children.Add(MakeNote("设置文件: " + GameSettings.SettingsPath));
+            // ---- 关于 ----
+            var gAbout = UiFieldGroup(_settingsBody, "关于");
+            gAbout.Children.Add(MakeNote("VPet Linux (Avalonia) " + AppInfo.Version +
+                                         $" · 食物 {MainDisplay.Core?.Foods.Count ?? 0} 种" +
+                                         $" · 背包 {MainDisplay.Core?.Inventory?.TotalCount ?? 0} 件"));
+            gAbout.Children.Add(MakeNote("自定义台词: " + SpeechPool.UserSpeechPath));
+            gAbout.Children.Add(MakeNote("设置文件: " + GameSettings.SettingsPath));
         }
 
         /// <summary>

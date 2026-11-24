@@ -1,6 +1,6 @@
 # VPet for Linux (Avalonia) — 统信 UOS / Deepin 适配版
 
-![Version](https://img.shields.io/badge/version-1.4.1-blue)
+![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux%20(UOS%2FDeepin)-green)
 ![Arch](https://img.shields.io/badge/arch-x64%20%7C%20arm64-lightgrey)
 ![Framework](https://img.shields.io/badge/.NET-8.0-512bd4)
@@ -17,9 +17,16 @@
 
 ## 截图
 
+> 六个面板共用同一套界面语言（v1.5.0 统一）：卡片式列表、圆角胶囊页签、彩色属性条，
+> 关闭入口统一在右上角。截图取自统信 UOS（arm64 / Deepin 桌面）。
+
 | 角色面板 | 商店 | 工作 / 学习 |
 |---|---|---|
 | ![角色面板](assets/screenshots/01-角色面板.png) | ![商店](assets/screenshots/02-商店.png) | ![工作面板](assets/screenshots/03-工作面板.png) |
+
+| 物品栏 | 成就 | 设置 |
+|---|---|---|
+| ![物品栏](assets/screenshots/04-物品栏.png) | ![成就](assets/screenshots/05-成就.png) | ![设置](assets/screenshots/06-设置.png) |
 
 ---
 
@@ -73,15 +80,15 @@
 
 | 包 | 说明 |
 |---|---|
-| `VPet-UOS-v1.4.1-linux-x64-full.tar.gz` | 含桌宠资源 + .NET 运行时，**解压即用**（约 1.0 GB） |
-| `VPet-UOS-v1.4.1-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
+| `VPet-UOS-v1.5.0-linux-x64-full.tar.gz` | 含桌宠资源 + .NET 运行时，**解压即用**（约 1.0 GB） |
+| `VPet-UOS-v1.5.0-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
 | `...-nomod.tar.gz` | 不含桌宠资源，体积小（约 42 MB），需自备 `mod/` 目录 |
 
 不确定自己的架构？终端里跑 `uname -m`：`x86_64` 选 x64，`aarch64` 选 arm64。
 
 ```bash
-tar xzf VPet-UOS-v1.4.1-linux-x64-full.tar.gz
-cd VPet-UOS-v1.4.1
+tar xzf VPet-UOS-v1.5.0-linux-x64-full.tar.gz
+cd VPet-UOS-v1.5.0
 ./scripts/install.sh            # 安装到 ~/.local/share/vpet 并生成桌面快捷方式
 ```
 

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -72,8 +73,9 @@ namespace VPetAvalonia.App.Views
 
             if (_workPanel == null)
             {
-                _workPanel = CreateOverlayPanel("工作 / 学习", WorkPanelWidth, WorkPanelHeight,
-                    out _workBody, out _workTools, out _workFooter, 78, 46);
+                // 副标题放"正在进行/挑一项"状态(每秒变), 固定头部只留分类胶囊
+                _workPanel = CreatePanel("工作 / 学习", 440, 640,
+                    out _workBody, out _workTools, out _workFooter, out _workStatusText, 44, 34);
                 BuildWorkTools();
                 PetCanvas.Children.Add(_workPanel);
 
@@ -150,15 +152,6 @@ namespace VPetAvalonia.App.Views
 
             _workTabRow = new StackPanel { Orientation = Orientation.Horizontal };
             _workTools.Children.Add(_workTabRow);
-
-            _workStatusText = new TextBlock
-            {
-                Foreground = TextAccent,
-                FontSize = 12,
-                Margin = new Thickness(0, 6, 0, 0),
-                TextWrapping = TextWrapping.Wrap,
-            };
-            _workTools.Children.Add(_workStatusText);
         }
 
         /// <summary>分类页签 + 只看收藏 (状态变化时只重建这一行)</summary>
@@ -175,23 +168,14 @@ namespace VPetAvalonia.App.Views
                 if (n == 0)
                     continue;
                 var type = t;
-                var btn = new Button
-                {
-                    Content = $"{TypeName(t)} {n}",
-                    FontSize = 11,
-                    Padding = new Thickness(9, 3),
-                    Margin = new Thickness(0, 0, 4, 0),
-                    Background = _workFilter == t ? Brush("#AA0286C6") : Brush("#AA444444"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
+                var pill = UiPill($"{TypeName(t)} {n}", _workFilter == t, () =>
                 {
                     _workFilter = type;
                     BuildWorkTabRow();
                     RefreshWorkPanel();
                     UpdateClickThrough();
-                };
-                _workTabRow.Children.Add(btn);
+                }, small: true);
+                _workTabRow.Children.Add(pill);
             }
 
             var star = MakeToggle(() => _workOnlyStar, v =>
@@ -253,133 +237,124 @@ namespace VPetAvalonia.App.Views
             var levelOk = save.Level >= work.LevelLimit || running;
             var ill = work.Type != Work.WorkType.Play && save.Mode == ModeType.Ill && !running;
             var enabled = levelOk && !ill;
-
-            var row = new Border
-            {
-                Background = running ? Brush("#332E7D32") : Brushes.Transparent,
-                Padding = new Thickness(4, 5),
-                Margin = new Thickness(0, 0, 0, 2),
-                BorderBrush = running ? Brush("#882E7D32") : Brush("#33FFFFFF"),
-                BorderThickness = new Thickness(running ? 1 : 0, 0, running ? 1 : 0, 1),
-                CornerRadius = new CornerRadius(4),
-                Opacity = enabled || running ? 1.0 : 0.45,
-            };
-
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));   // 星标
-            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star)); // 信息
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));   // 按钮
+            var starred = WorkFavorites.Contains(work.Name);
 
             // ---- 星标 ----
-            var starBtn = new Button
+            var starText = new TextBlock
             {
-                Content = WorkFavorites.Contains(work.Name) ? "★" : "☆",
+                Text = starred ? "★" : "☆",
                 FontSize = 15,
-                Padding = new Thickness(7, 2),
-                Background = Brushes.Transparent,
-                Foreground = WorkFavorites.Contains(work.Name) ? Brushes.Gold : Brush("#777777"),
+                Foreground = starred ? UiGold : Brush("#777777"),
+                HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center,
             };
-            starBtn.Click += (s, e) =>
+            var star = new Border
+            {
+                Width = 22,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 4, 0),
+                Cursor = new Cursor(StandardCursorType.Hand),
+                Child = starText,
+            };
+            star.PointerPressed += (s, e) =>
             {
                 e.Handled = true;
                 WorkFavorites.Toggle(work.Name);
                 RefreshWorkPanel();
                 UpdateClickThrough();
             };
-            grid.Children.Add(starBtn);
 
-            // ---- 名称 + 副信息 ----
-            var info = new StackPanel { Margin = new Thickness(2, 0, 6, 0) };
-
+            // ---- 名称 + 徽章 ----
             var nameLine = new StackPanel { Orientation = Orientation.Horizontal };
             nameLine.Children.Add(new TextBlock
             {
                 Text = work.Name,
-                Foreground = Brushes.White,
+                Foreground = enabled || running ? Brushes.White : Brush("#AAFFFFFF"),
                 FontSize = 14,
                 VerticalAlignment = VerticalAlignment.Center,
             });
             if (running)
-            {
-                nameLine.Children.Add(new TextBlock
-                {
-                    Text = "进行中",
-                    Foreground = Brush("#8BC34A"),
-                    FontSize = 11,
-                    Margin = new Thickness(6, 0, 0, 0),
-                    VerticalAlignment = VerticalAlignment.Center,
-                });
-            }
-            info.Children.Add(nameLine);
+                nameLine.Children.Add(UiBadge("进行中", "#552E7D32", UiGreen, 10));
+            if (!levelOk)
+                nameLine.Children.Add(UiBadge($"需要 Lv.{work.LevelLimit}", "#55EF5350", Brush("#FFB4A8"), 10));
+            if (ill)
+                nameLine.Children.Add(UiBadge("生病中", "#55EF5350", Brush("#FFB4A8"), 10));
 
-            // 第一行: 时长 · 收益速度 · 总收益
-            info.Children.Add(new TextBlock
+            // ---- 第 2 行: 时长 · 收益速度 · 总收益 ----
+            var income = new TextBlock
             {
                 Text = $"{work.Time} 分 · 约 {EstimatePerMin(work):0.#} {TypeUnit(work)}/分" +
                        $" · 做完约 {EstimateTotal(work):0} {TypeUnit(work)}",
-                Foreground = Brush("#8A8A8A"),
+                Foreground = UiMuted,
                 FontSize = 11,
-                Margin = new Thickness(0, 1, 0, 0),
-            });
+                Margin = new Thickness(0, 2, 0, 0),
+            };
 
-            // 第二行: 消耗 + 完成奖励 + 等级门槛
+            // ---- 第 3 行: 消耗 ----
             var cost = new List<string>();
             if (work.StrengthFood > 0) cost.Add($"食物{work.StrengthFood:0.#}");
             if (work.StrengthDrink > 0) cost.Add($"水{work.StrengthDrink:0.#}");
             if (work.Feeling > 0) cost.Add($"心情{work.Feeling:0.#}");
-            var extra = cost.Count > 0 ? "消耗 " + string.Join("/", cost) : "几乎不消耗";
-            if (!levelOk)
-                extra += $" · 需要 Lv.{work.LevelLimit}";
-            if (ill)
-                extra += " · 生病中不能做";
-
-            info.Children.Add(new TextBlock
+            var costText = cost.Count > 0 ? "消耗 " + string.Join(" / ", cost) : "几乎不消耗";
+            var costLine = new TextBlock
             {
-                Text = extra,
-                Foreground = levelOk ? Brush("#7A7A7A") : Brush("#C98A8A"),
+                Text = costText,
+                Foreground = levelOk ? UiFaint : Brush("#C98A8A"),
                 FontSize = 11,
-                TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(0, 1, 0, 0),
-            });
-            Grid.SetColumn(info, 1);
-            grid.Children.Add(info);
+            };
+
+            var info = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            info.Children.Add(nameLine);
+            info.Children.Add(income);
+            info.Children.Add(costLine);
+
+            // 正在做的项多给一条进度(工作进度条, 和角色面板的属性条同一套画法)
+            if (running && WorkTimer.CurrentWork != null)
+            {
+                var done = Math.Min(WorkTimer.WorkMinutes, work.Time);
+                info.Children.Add(new Border
+                {
+                    Margin = new Thickness(-4, 4, 0, 0),
+                    Child = UiMeter("进度", done, work.Time, $"{done:0}/{work.Time} 分", UiGreen, labelWidth: 30),
+                });
+            }
 
             // ---- 右: 开始 / 停止 ----
-            var action = new Button
-            {
-                FontSize = 11,
-                Padding = new Thickness(11, 3),
-                Margin = new Thickness(2, 0, 0, 0),
-                VerticalAlignment = VerticalAlignment.Center,
-                Background = running ? Brush("#AA8B3A3A")
-                           : enabled ? Brush("#AA2E7D32") : Brush("#55333333"),
-                Foreground = enabled || running ? Brushes.White : Brush("#888888"),
-                Content = running ? "停止" : levelOk ? "开始" : $"Lv.{work.LevelLimit}",
-                IsEnabled = enabled || running,
-            };
-            action.Click += (s, e) =>
-            {
-                e.Handled = true;
-                StartOrStopWork(work);
-            };
+            var action = UiAction(
+                running ? "停止" : levelOk ? "开始" : $"Lv.{work.LevelLimit}",
+                running ? BtnRed : enabled ? BtnGreen : "#55333333",
+                running ? BtnRedHover : BtnGreenHover,
+                () => StartOrStopWork(work),
+                enabled: enabled || running,
+                noMargin: true);
+            action.VerticalAlignment = VerticalAlignment.Center;
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));        // 星标
+            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));  // 信息
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));       // 按钮
+            grid.Children.Add(star);
+            Grid.SetColumn(info, 1);
+            grid.Children.Add(info);
             Grid.SetColumn(action, 2);
             grid.Children.Add(action);
 
-            row.Child = grid;
+            var card = UiCard(grid, 8, 6, 4, running ? Brush("#332E7D32") : null);
+            if (!running)
+                UiHover(card);
+            if (!enabled && !running)
+                card.Opacity = 0.5;
 
-            // 整行点击 = 开始/停止 (和"投喂""商店"一致的操作习惯)
-            row.PointerPressed += (s, e) =>
+            // 整行点击 = 开始/停止 (点星标或右侧按钮时它们自己已 e.Handled)
+            card.PointerPressed += (s, e) =>
             {
-                if (e.Source is Visual v && (v is Button || VisualAncestorIsButton(v)))
-                    return;
                 if (!enabled && !running)
                     return;
-                e.Handled = true;
                 StartOrStopWork(work);
             };
 
-            return row;
+            return card;
         }
 
         private static bool VisualAncestorIsButton(Visual v)

@@ -1170,7 +1170,12 @@ namespace VPetAvalonia.App.Views
         private static string? FillColor(MainWindow.CharMeter? meter)
             => meter?.Fill.Background?.ToString();
 
-        /// <summary>把列表里所有 Button 的 Content 和名字文本捞出来(自检核对"进行中/停止"用)</summary>
+        /// <summary>
+        /// 把列表里一行里的所有文本捞出来(自检核对"进行中/停止/开始"用)。
+        ///
+        /// v1.5.0 起行内结构变成「Border 卡片 → Grid → StackPanel/Border(胶囊) → TextBlock」,
+        /// 徽章又藏在名字行里面, 只扫两层会漏。这里直接递归整棵子树, 以后改布局也不用再动它。
+        /// </summary>
         private static List<string> RowTexts(StackPanel? body)
         {
             var list = new List<string>();
@@ -1178,25 +1183,41 @@ namespace VPetAvalonia.App.Views
                 return list;
             foreach (var child in body.Children)
             {
-                if (child is not Border { Child: Grid g })
-                    continue;
-                foreach (var c in g.Children)
-                {
-                    switch (c)
-                    {
-                        case Button b when b.Content is string s:
-                            list.Add(s);
-                            break;
-                        case StackPanel sp:
-                            foreach (var t in sp.Children.OfType<TextBlock>())
-                                list.Add(t.Text ?? "");
-                            foreach (var inner in sp.Children.OfType<StackPanel>())
-                                list.AddRange(inner.Children.OfType<TextBlock>().Select(t => t.Text ?? ""));
-                            break;
-                    }
-                }
+                if (child is Border row)   // 列表行都是 Border 卡片, 脚注/提示条跳过
+                    CollectTexts(row, list);
             }
             return list;
+        }
+
+        private static void CollectTexts(Control control, List<string> list)
+        {
+            switch (control)
+            {
+                case TextBlock t:
+                    list.Add(t.Text ?? "");
+                    break;
+                case Button b when b.Content is string s:
+                    list.Add(s);
+                    break;
+                case Border bd when bd.Child != null:
+                    CollectTexts(bd.Child, list);
+                    break;
+                case StackPanel sp:
+                    foreach (var c in sp.Children)
+                        CollectTexts(c, list);
+                    break;
+                case Grid g:
+                    foreach (var c in g.Children)
+                        CollectTexts(c, list);
+                    break;
+                case Panel p:
+                    foreach (var c in p.Children)
+                        CollectTexts(c, list);
+                    break;
+                case ContentControl cc when cc.Content is Control inner:
+                    CollectTexts(inner, list);
+                    break;
+            }
         }
 
         /// <summary>取列表第一行显示的名字(自检用: 核对收藏置顶)</summary>

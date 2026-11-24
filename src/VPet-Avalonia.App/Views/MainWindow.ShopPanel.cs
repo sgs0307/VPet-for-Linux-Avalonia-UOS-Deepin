@@ -33,7 +33,7 @@ namespace VPetAvalonia.App.Views
         private TextBox? _shopSearch;
         private StackPanel? _shopFilterRow;
         private StackPanel? _shopSortRow;
-        private TextBlock? _shopHeadText;   // "$ 123  共 N 项"
+        private TextBlock? _shopHeadText;   // 头部副标题: "$ 123 · 共 N 项 · 第 1/6 页"
         private int _shopShownCount;
 
         private string _shopQuery = "";
@@ -67,8 +67,10 @@ namespace VPetAvalonia.App.Views
 
             if (_shopPanel == null)
             {
-                // 列表区用 CreateOverlayPanel 的 body, 工具栏挂在标题下面(不随列表滚走)
-                _shopPanel = CreateOverlayPanel("商店", 430, 600, out _shopBody, out _shopTools, out _shopFooter, 84, 46);
+                // 列表区用面板的 body, 工具栏挂在标题下面(不随列表滚走);
+                // 余额/条数放进标题下的副标题, 比在列表顶上塞一行金色小字更稳(不会滚走)
+                _shopPanel = CreatePanel("商店", 440, 640,
+                    out _shopBody, out _shopTools, out _shopFooter, out _shopHeadText, 92, 46);
                 BuildShopTools();
                 PetCanvas.Children.Add(_shopPanel);
             }
@@ -83,13 +85,7 @@ namespace VPetAvalonia.App.Views
             if (_shopTools == null)
                 return;
 
-            _shopSearch = new TextBox
-            {
-                Watermark = "搜索名字 / 类型, 或输入价格上限(如 50)",
-                FontSize = 13,
-                Margin = new Thickness(0, 4, 0, 6),
-                MinHeight = 28,
-            };
+            _shopSearch = new TextBox();
             _shopSearch.TextChanged += (s, e) =>
             {
                 var q = _shopSearch?.Text ?? "";
@@ -100,12 +96,12 @@ namespace VPetAvalonia.App.Views
                 RefreshShopList();
                 UpdateClickThrough();
             };
-            _shopTools.Children.Add(_shopSearch);
+            _shopTools.Children.Add(UiSearch(_shopSearch, "搜索名字 / 类型, 或输入价格上限(如 50)"));
 
             _shopFilterRow = new StackPanel { Orientation = Orientation.Horizontal };
             _shopTools.Children.Add(_shopFilterRow);
 
-            _shopSortRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+            _shopSortRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
             _shopTools.Children.Add(_shopSortRow);
 
             BuildShopFilterRow();
@@ -119,29 +115,20 @@ namespace VPetAvalonia.App.Views
             _shopFilterRow.Children.Clear();
 
             var foods = MainDisplay.Core?.Foods ?? new List<Food>();
-            var inv = MainDisplay.Core?.Inventory;
 
             void AddPill(string label, Food.FoodType? type, int badge)
             {
                 var active = type == null ? _shopFilter == (Food.FoodType)(-1) : _shopFilter == type;
-                var btn = new Button
-                {
-                    Content = badge > 0 ? $"{label} {badge}" : label,
-                    FontSize = 11,
-                    Padding = new Thickness(7, 2),
-                    Margin = new Thickness(0, 0, 4, 0),
-                    Background = active ? Brush("#AA0286C6") : Brush("#AA444444"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
+                var caption = badge > 0 ? $"{label} {badge}" : label;
+                var pill = UiPill(caption, active, () =>
                 {
                     _shopFilter = type ?? (Food.FoodType)(-1);
                     _shopPage = 0;
                     BuildShopFilterRow();
                     RefreshShopList();
                     UpdateClickThrough();
-                };
-                _shopFilterRow!.Children.Add(btn);
+                }, small: true);
+                _shopFilterRow!.Children.Add(pill);
             }
 
             AddPill("全部", null, 0);
@@ -161,8 +148,8 @@ namespace VPetAvalonia.App.Views
             _shopSortRow.Children.Add(new TextBlock
             {
                 Text = "排序",
-                Foreground = TextDim,
-                FontSize = 12,
+                Foreground = UiFaint,
+                FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),
             });
@@ -170,24 +157,15 @@ namespace VPetAvalonia.App.Views
             for (int i = 0; i < ShopSortNames.Length; i++)
             {
                 var idx = i;
-                var btn = new Button
-                {
-                    Content = ShopSortNames[i],
-                    FontSize = 11,
-                    Padding = new Thickness(8, 2),
-                    Margin = new Thickness(0, 0, 4, 0),
-                    Background = _shopSort == i ? Brush("#AA2E7D32") : Brush("#AA444444"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
+                var pill = UiPill(ShopSortNames[i], _shopSort == i, () =>
                 {
                     _shopSort = idx;
                     _shopPage = 0;
                     BuildShopSortRow();
                     RefreshShopList();
                     UpdateClickThrough();
-                };
-                _shopSortRow.Children.Add(btn);
+                }, small: true);
+                _shopSortRow.Children.Add(pill);
             }
 
             var affordable = MakeToggle(() => _shopOnlyAffordable, v =>
@@ -277,13 +255,6 @@ namespace VPetAvalonia.App.Views
             LastShopOrder = filtered.Select(f => f.Name).ToList();
 
             _shopShownCount = filtered.Count;
-            _shopHeadText = new TextBlock
-            {
-                Foreground = Brushes.Gold,
-                FontSize = 12,
-                Margin = new Thickness(0, 2, 0, 4),
-            };
-            _shopBody.Children.Add(_shopHeadText);
             UpdateShopHeader();
             if (filtered.Count == 0)
             {
@@ -324,53 +295,38 @@ namespace VPetAvalonia.App.Views
             {
                 Orientation = Orientation.Horizontal,
                 HorizontalAlignment = HorizontalAlignment.Center,
+                Spacing = 6,
             };
 
-            Button PageBtn(string caption, bool enabled)
-            {
-                return new Button
-                {
-                    Content = caption,
-                    FontSize = 12,
-                    Padding = new Thickness(12, 3),
-                    Margin = new Thickness(0, 0, 6, 0),
-                    IsEnabled = enabled,
-                    Background = Brush(enabled ? "#AA444444" : "#66333333"),
-                    Foreground = Brushes.White,
-                };
-            }
-
-            var prev = PageBtn("上一页", page > 0);
-            prev.Click += (s, e) =>
+            var prev = UiAction("上一页", BtnGray, BtnGrayHover, () =>
             {
                 if (_shopPage > 0) _shopPage--;
                 RefreshShopList();
                 UpdateClickThrough();
-            };
+            }, page > 0, noMargin: true);
             pager.Children.Add(prev);
 
             pager.Children.Add(new TextBlock
             {
                 Text = $"{page + 1} / {pages}",
                 Foreground = TextDim,
-                FontSize = 12,
+                FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(0, 0, 6, 0),
+                Margin = new Thickness(2, 0, 2, 0),
             });
 
-            var next = PageBtn("下一页", page < pages - 1);
-            next.Click += (s, e) =>
+            var next = UiAction("下一页", BtnGray, BtnGrayHover, () =>
             {
                 if (_shopPage < pages - 1) _shopPage++;
                 RefreshShopList();
                 UpdateClickThrough();
-            };
+            }, page < pages - 1, noMargin: true);
             pager.Children.Add(next);
 
             _shopFooter.Children.Add(pager);
         }
 
-        /// <summary>头部"$ 余额  共 N 项"(余额变化后单独更新, 不重建列表)</summary>
+        /// <summary>头部副标题"余额 · 共 N 项 · 第 x/y 页"(余额变化后单独更新, 不重建列表)</summary>
         private void UpdateShopHeader()
         {
             if (_shopHeadText == null)
@@ -380,7 +336,7 @@ namespace VPetAvalonia.App.Views
             var filtered = _shopQuery.Trim().Length > 0 || _shopFilter >= 0 || _shopOnlyAffordable;
             var pages = Math.Max(1, (_shopShownCount + ShopPageSize - 1) / ShopPageSize);
             var pageInfo = pages > 1 ? $" · 第 {_shopPage + 1}/{pages} 页" : "";
-            _shopHeadText.Text = $"$ {money:0.#}    共 {_shopShownCount} 项" + pageInfo +
+            _shopHeadText.Text = $"余额 $ {money:0.#} · 共 {_shopShownCount} 项{pageInfo}" +
                                  (filtered ? $" (全部 {core?.Foods.Count ?? 0} 项)" : "");
         }
 
@@ -393,102 +349,115 @@ namespace VPetAvalonia.App.Views
             return effect / f.Price;
         }
 
+        /// <summary>分类配色: 正餐橙 / 饮料蓝 / 零食粉 / 药品绿 / 礼品紫 (和角色面板属性条同一套色)</summary>
+        private static IBrush FoodTypeBrush(Food.FoodType t) => t switch
+        {
+            Food.FoodType.Meal => UiOrange,
+            Food.FoodType.Drink => UiCyan,
+            Food.FoodType.Snack => Brush("#F06292"),
+            Food.FoodType.Drug => UiGreen,
+            Food.FoodType.Gift => UiPurple,
+            _ => UiMuted,
+        };
+
         private Border BuildShopRow(Food food)
         {
             var core = MainDisplay.Core!;
             var money = core.Save?.Money ?? 0;
             var affordable = food.Price <= money;
 
-            var row = new Border
-            {
-                Background = Brushes.Transparent,
-                Padding = new Thickness(4, 4),
-                Margin = new Thickness(0, 0, 0, 2),
-                BorderBrush = Brush("#33FFFFFF"),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-            };
-
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-
-            // ---- 左: 名称 + 已有 + 效果 ----
-            var left = new StackPanel();
-            var nameLine = new StackPanel { Orientation = Orientation.Horizontal };
-            nameLine.Children.Add(new TextBlock
+            // ---- 左: 名称 + 已有 + 类型/效果 ----
+            var nameText = new TextBlock
             {
                 Text = food.Name,
                 Foreground = affordable ? Brushes.White : Brush("#99FFFFFF"),
                 FontSize = 14,
                 VerticalAlignment = VerticalAlignment.Center,
-            });
+            };
             var ownedText = new TextBlock
             {
-                Foreground = TextAccent,
-                FontSize = 11,
+                Foreground = UiCyan,
+                FontSize = 10,
                 Margin = new Thickness(6, 0, 0, 0),
                 VerticalAlignment = VerticalAlignment.Center,
             };
+            var nameLine = new StackPanel { Orientation = Orientation.Horizontal };
+            nameLine.Children.Add(nameText);
             nameLine.Children.Add(ownedText);
-            left.Children.Add(nameLine);
 
-            left.Children.Add(new TextBlock
+            var metaLine = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+            metaLine.Children.Add(new TextBlock
             {
-                Text = $"{food.TypeName} · {food.EffectText}",
-                Foreground = Brush("#8A8A8A"),
+                Text = food.TypeName,
+                Foreground = FoodTypeBrush(food.Type),
                 FontSize = 11,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 1, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
             });
-            grid.Children.Add(left);
+            metaLine.Children.Add(new TextBlock
+            {
+                Text = " · ",
+                Foreground = UiFaint,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+            });
+            metaLine.Children.Add(new TextBlock
+            {
+                Text = food.EffectText,
+                Foreground = UiMuted,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
 
-            // ---- 中: 单价 ----
+            var info = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 8, 0) };
+            info.Children.Add(nameLine);
+            info.Children.Add(metaLine);
+
+            // ---- 右: 单价 + 批量按钮(上下两行, 比横排三个按钮省宽度) ----
             var price = new TextBlock
             {
                 Text = $"${food.Price:0.#}",
-                Foreground = Brushes.Gold,
+                Foreground = affordable ? UiGold : Brush("#88FF8A80"),
                 FontSize = 13,
-                VerticalAlignment = VerticalAlignment.Center,
-                Margin = new Thickness(8, 0, 8, 0),
+                FontWeight = FontWeight.Bold,
+                HorizontalAlignment = HorizontalAlignment.Right,
             };
-            Grid.SetColumn(price, 1);
-            grid.Children.Add(price);
 
-            // ---- 右: 批量购买 ----
-            var btns = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+            var btns = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                Margin = new Thickness(0, 3, 0, 0),
+            };
+            var first = true;
             foreach (var count in new[] { 1, 5, 10 })
             {
                 var c = count;
-                var btn = new Button
-                {
-                    Content = "×" + c,
-                    FontSize = 11,
-                    Padding = new Thickness(8, 2),
-                    Margin = new Thickness(2, 0, 0, 0),
-                    Background = Brush("#AA2E7D32"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
-                {
-                    e.Handled = true;
-                    BuyFood(food, c);
-                };
-                btns.Children.Add(btn);
+                var pill = UiAction("×" + c,
+                    c == 1 ? BtnGreen : BtnGreenDeep,
+                    c == 1 ? BtnGreenHover : BtnGreenDeepHover,
+                    () => BuyFood(food, c), noMargin: first);
+                first = false;
+                btns.Children.Add(pill);
             }
-            Grid.SetColumn(btns, 2);
-            grid.Children.Add(btns);
 
-            row.Child = grid;
+            var right = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            right.Children.Add(price);
+            right.Children.Add(btns);
 
-            // 整行点击 = 买 1 个 (保留老习惯); 点在按钮上时让按钮自己处理
-            row.PointerPressed += (s, e) =>
-            {
-                if (e.Source is Visual v && (v is Button || v.FindAncestorOfType<Button>() != null))
-                    return;
-                e.Handled = true;
-                BuyFood(food, 1);
-            };
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.Children.Add(info);
+            Grid.SetColumn(right, 1);
+            grid.Children.Add(right);
+
+            var card = UiCard(grid, 10, 6, 4);
+            UiHover(card);
+            card.Opacity = affordable ? 1.0 : 0.55;
+
+            // 整行点击 = 买 1 个 (保留老习惯)
+            card.PointerPressed += (s, e) => BuyFood(food, 1);
 
             void UpdateRow()
             {
@@ -496,13 +465,13 @@ namespace VPetAvalonia.App.Views
                 var owned = core.Inventory?.Count(food.Name) ?? 0;
                 ownedText.Text = owned > 0 ? $"[已有 {owned}]" : "";
                 var can = food.Price <= nowMoney;
-                price.Foreground = can ? Brushes.Gold : Brush("#88FF8A80");
-                row.Opacity = can ? 1.0 : 0.55;
+                price.Foreground = can ? UiGold : Brush("#88FF8A80");
+                card.Opacity = can ? 1.0 : 0.55;
             }
 
             UpdateRow();
             _shopRowRefresh.Add(UpdateRow);
-            return row;
+            return card;
         }
 
         /// <summary>

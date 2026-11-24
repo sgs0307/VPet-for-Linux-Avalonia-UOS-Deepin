@@ -52,7 +52,6 @@ namespace VPetAvalonia.App.Views
         // ---- 配色 ----
         private static readonly IBrush CardBg = Brush("#14FFFFFF");
         private static readonly IBrush CardBgHover = Brush("#2EFFFFFF");
-        private static readonly IBrush TrackBg = Brush("#26FFFFFF");
         private static readonly IBrush Danger = Brush("#EF5350");
         private static readonly IBrush TabOnBg = Brush("#330286C6");
         private static readonly IBrush ChipText = Brush("#E6FFFFFF");
@@ -109,9 +108,9 @@ namespace VPetAvalonia.App.Views
 
         private void BuildCharacterPanel()
         {
-            _charPanel = CreateOverlayPanel("角色面板", 430, 690,
-                                            out _charBody, out var header, out _,
-                                            headerHeight: 96, showTitle: false, closeButton: false);
+            _charPanel = CreatePanel("角色面板", 440, 690,
+                                     out _charBody, out var header, out _, out _,
+                                     headerHeight: 96, showTitle: false, showClose: false);
             PetCanvas.Children.Add(_charPanel);
 
             BuildHeader(header);
@@ -494,7 +493,7 @@ namespace VPetAvalonia.App.Views
             seg.Children.Add(fill);
 
             var bar = new Grid { Height = 8, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0) };
-            bar.Children.Add(new Border { Background = TrackBg, CornerRadius = new CornerRadius(4) });
+            bar.Children.Add(new Border { Background = UiTrackBg, CornerRadius = new CornerRadius(4) });
             bar.Children.Add(seg);
 
             var row = new Grid();

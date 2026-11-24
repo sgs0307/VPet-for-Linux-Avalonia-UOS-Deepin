@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Media;
 using VPetAvalonia.Core;
@@ -28,6 +29,7 @@ namespace VPetAvalonia.App.Views
         private TextBox? _invSearch;
         private StackPanel? _invFilterRow;
         private StackPanel? _invSortRow;
+        private TextBlock? _invHeadText;    // 头部副标题: "共 5 种 / 12 件 · 总价 $230"
 
         private Food.FoodType _invFilter = (Food.FoodType)(-1); // -1 = 全部
         private string _invQuery = "";
@@ -52,7 +54,7 @@ namespace VPetAvalonia.App.Views
         {
             if (_invPanel == null)
             {
-                _invPanel = CreateOverlayPanel("物品栏", 440, 560, out _invBody, out _invTools, headerHeight: 84);
+                _invPanel = CreatePanel("物品栏", 440, 600, out _invBody, out _invTools, out _, out _invHeadText, 92, 0);
                 BuildInvTools();
                 PetCanvas.Children.Add(_invPanel);
             }
@@ -64,13 +66,7 @@ namespace VPetAvalonia.App.Views
             if (_invTools == null)
                 return;
 
-            _invSearch = new TextBox
-            {
-                Watermark = "搜索名字 / 类型 / 效果, 或输入价格上限",
-                FontSize = 13,
-                Margin = new Thickness(0, 4, 0, 6),
-                MinHeight = 28,
-            };
+            _invSearch = new TextBox();
             _invSearch.TextChanged += (s, e) =>
             {
                 var q = _invSearch?.Text ?? "";
@@ -80,12 +76,12 @@ namespace VPetAvalonia.App.Views
                 RefreshInventoryList();
                 UpdateClickThrough();
             };
-            _invTools.Children.Add(_invSearch);
+            _invTools.Children.Add(UiSearch(_invSearch, "搜索名字 / 类型 / 效果, 或输入价格上限"));
 
             _invFilterRow = new StackPanel { Orientation = Orientation.Horizontal };
             _invTools.Children.Add(_invFilterRow);
 
-            _invSortRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 4, 0, 0) };
+            _invSortRow = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 6, 0, 0) };
             _invTools.Children.Add(_invSortRow);
 
             BuildInvFilterRow();
@@ -113,23 +109,14 @@ namespace VPetAvalonia.App.Views
                         .Sum(x => inv.Count(x!.Name));
 
                 var active = IsInvFilterActive(f);
-                var btn = new Button
-                {
-                    Content = count > 0 ? $"{f.Label} {count}" : f.Label,
-                    FontSize = 11,
-                    Padding = new Thickness(7, 2),
-                    Margin = new Thickness(0, 0, 4, 0),
-                    Background = active ? Brush("#AA0286C6") : Brush("#AA444444"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
+                var pill = UiPill(count > 0 ? $"{f.Label} {count}" : f.Label, active, () =>
                 {
                     _invFilter = type ?? (Food.FoodType)(-1);
                     BuildInvFilterRow();
                     RefreshInventoryList();
                     UpdateClickThrough();
-                };
-                _invFilterRow.Children.Add(btn);
+                }, small: true);
+                _invFilterRow.Children.Add(pill);
             }
         }
 
@@ -142,8 +129,8 @@ namespace VPetAvalonia.App.Views
             _invSortRow.Children.Add(new TextBlock
             {
                 Text = "排序",
-                Foreground = TextDim,
-                FontSize = 12,
+                Foreground = UiFaint,
+                FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(0, 0, 6, 0),
             });
@@ -151,30 +138,21 @@ namespace VPetAvalonia.App.Views
             for (int i = 0; i < InvSortNames.Length; i++)
             {
                 var idx = i;
-                var btn = new Button
-                {
-                    Content = InvSortNames[i],
-                    FontSize = 11,
-                    Padding = new Thickness(8, 2),
-                    Margin = new Thickness(0, 0, 4, 0),
-                    Background = _invSort == i ? Brush("#AA2E7D32") : Brush("#AA444444"),
-                    Foreground = Brushes.White,
-                };
-                btn.Click += (s, e) =>
+                var pill = UiPill(InvSortNames[i], _invSort == i, () =>
                 {
                     _invSort = idx;
                     BuildInvSortRow();
                     RefreshInventoryList();
                     UpdateClickThrough();
-                };
-                _invSortRow.Children.Add(btn);
+                }, small: true);
+                _invSortRow.Children.Add(pill);
             }
 
             var starCount = Favorites.Count;
             _invSortRow.Children.Add(new TextBlock
             {
-                Text = starCount > 0 ? $"收藏 {starCount} 项置顶" : "点名称左边的 ☆ 收藏",
-                Foreground = Brush("#888888"),
+                Text = starCount > 0 ? $"★ 已收藏 {starCount}" : "点 ☆ 收藏",
+                Foreground = UiFaint,
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center,
                 Margin = new Thickness(6, 0, 0, 0),
@@ -236,13 +214,12 @@ namespace VPetAvalonia.App.Views
             LastInventoryOrder = entries.Select(x => x.food!.Name).ToList();
 
             var totalValue = entries.Sum(x => x.food!.Price * x.count);
-            _invBody.Children.Add(new TextBlock
+            if (_invHeadText != null)
             {
-                Text = $"共 {entries.Count} 种 / {entries.Sum(x => x.count)} 件   总价值 ${totalValue:0.#}",
-                Foreground = TextAccent,
-                FontSize = 13,
-                Margin = new Thickness(0, 2, 0, 4),
-            });
+                var narrowed = q.Length > 0 || _invFilter >= 0;
+                _invHeadText.Text = $"共 {entries.Count} 种 / {entries.Sum(x => x.count)} 件 · 总价值 $ {totalValue:0.#}" +
+                                    (narrowed ? $" (背包 {inv.Items.Count(kv => kv.Value > 0)} 种)" : "");
+            }
 
             if (entries.Count == 0)
             {
@@ -262,29 +239,22 @@ namespace VPetAvalonia.App.Views
         {
             var fav = Favorites.Contains(food.Name);
 
-            var row = new Border
-            {
-                Padding = new Thickness(4, 4),
-                Margin = new Thickness(0, 0, 0, 2),
-                Background = fav ? Brush("#22FFD54F") : Brushes.Transparent,
-                BorderBrush = Brush("#33FFFFFF"),
-                BorderThickness = new Thickness(0, 0, 0, 1),
-            };
-
-            var grid = new Grid();
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
-            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
-
             // ---- 星标 ----
-            var star = new TextBlock
+            var starText = new TextBlock
             {
                 Text = fav ? "★" : "☆",
-                Foreground = fav ? Brushes.Gold : Brush("#777777"),
+                Foreground = fav ? UiGold : Brush("#777777"),
                 FontSize = 15,
-                Width = 22,
                 VerticalAlignment = VerticalAlignment.Center,
-                Cursor = new Avalonia.Input.Cursor(Avalonia.Input.StandardCursorType.Hand),
+                HorizontalAlignment = HorizontalAlignment.Center,
+            };
+            var star = new Border
+            {
+                Width = 24,
+                Cursor = new Cursor(StandardCursorType.Hand),
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(0, 0, 4, 0),
+                Child = starText,
             };
             star.PointerPressed += (s, e) =>
             {
@@ -292,75 +262,68 @@ namespace VPetAvalonia.App.Views
                 Favorites.Toggle(food.Name);
                 RefreshInventoryList();
             };
-            grid.Children.Add(star);
 
             // ---- 名称 + 副行 ----
-            var left = new StackPanel();
-            left.Children.Add(new TextBlock
+            var nameLine = new StackPanel { Orientation = Orientation.Horizontal };
+            nameLine.Children.Add(new TextBlock
             {
-                Text = $"{food.Name} ×{count}",
+                Text = food.Name,
                 Foreground = Brushes.White,
                 FontSize = 13,
+                VerticalAlignment = VerticalAlignment.Center,
             });
-            left.Children.Add(new TextBlock
+            nameLine.Children.Add(UiBadge($"×{count}", "#33FFFFFF"));
+
+            var metaLine = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 2, 0, 0) };
+            metaLine.Children.Add(new TextBlock
             {
-                Text = $"{food.TypeName} · ${food.Price:0.#} · {food.EffectText}",
-                Foreground = Brush("#8A8A8A"),
+                Text = food.TypeName,
+                Foreground = FoodTypeBrush(food.Type),
                 FontSize = 11,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 1, 0, 0),
+                VerticalAlignment = VerticalAlignment.Center,
             });
-            Grid.SetColumn(left, 1);
-            grid.Children.Add(left);
-
-            // ---- 按钮 ----
-            var btns = new StackPanel { Orientation = Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
-
-            Button MakeBtn(string caption, string bg)
+            metaLine.Children.Add(new TextBlock
             {
-                return new Button
-                {
-                    Content = caption,
-                    FontSize = 11,
-                    Padding = new Thickness(9, 2),
-                    Margin = new Thickness(3, 0, 0, 0),
-                    Background = Brush(bg),
-                    Foreground = Brushes.White,
-                };
-            }
+                Text = $" · $ {food.Price:0.#} · {food.EffectText}",
+                Foreground = UiMuted,
+                FontSize = 11,
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+            });
 
-            var useBtn = MakeBtn("用", "#AA2E7D32");
-            useBtn.Click += (s, e) =>
+            var left = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
+            left.Children.Add(nameLine);
+            left.Children.Add(metaLine);
+
+            // ---- 按钮: 用 / 全 / 弃 ----
+            var btns = new StackPanel
             {
-                e.Handled = true;
-                UseOne(food.Name);
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center,
+                Margin = new Thickness(6, 0, 0, 0),
             };
+
+            var useBtn = UiAction("用", BtnGreen, BtnGreenHover, () => UseOne(food.Name), noMargin: true);
             btns.Children.Add(useBtn);
 
             if (count > 1)
-            {
-                var allBtn = MakeBtn("全", "#AA1B5E20");
-                allBtn.Click += (s, e) =>
-                {
-                    e.Handled = true;
-                    UseAll(food);
-                };
-                btns.Children.Add(allBtn);
-            }
+                btns.Children.Add(UiAction("全", BtnGreenDeep, BtnGreenDeepHover, () => UseAll(food)));
 
-            var dropBtn = MakeBtn("弃", "#AA444444");
-            dropBtn.Click += (s, e) =>
-            {
-                e.Handled = true;
-                DropOne(food.Name);
-            };
-            btns.Children.Add(dropBtn);
+            btns.Children.Add(UiAction("弃", BtnGray, BtnGrayHover, () => DropOne(food.Name)));
 
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(1, GridUnitType.Star));
+            grid.ColumnDefinitions.Add(new ColumnDefinition(GridLength.Auto));
+            grid.Children.Add(star);
+            Grid.SetColumn(left, 1);
+            grid.Children.Add(left);
             Grid.SetColumn(btns, 2);
             grid.Children.Add(btns);
 
-            row.Child = grid;
-            return row;
+            var card = UiCard(grid, 8, 6, 4, fav ? Brush("#1AFFD54F") : null);
+            UiHover(card, fav ? Brush("#1AFFD54F") : null);
+            return card;
         }
 
         private bool IsInvFilterActive((string Label, Food.FoodType? Type) f)

@@ -147,6 +147,15 @@ else
 fi
 [[ -d "$INSTALL_DIR/mod" ]] || echo "[install] 警告: 发布目录没有 mod, 桌宠资源缺失时将无法加载宠物"
 
+# 版本文件: 程序启动时优先读同目录/上级目录的 VERSION(见 AppInfo.cs),
+# 不拷过去就只剩编译期兜底值 —— 以后发版「关于」里的版本号会对不上
+# (注意不能用 `[[ -f x ]] && cp`: 文件不存在时循环体返回非零, set -e 会直接退出)
+for f in VERSION CHANGELOG.md; do
+  if [[ -f "$ROOT/$f" ]]; then
+    cp -f "$ROOT/$f" "$INSTALL_DIR/$f"
+  fi
+done
+
 # ---- 生成启动器 ----
 sed -e "s|@INSTALL_DIR@|$INSTALL_DIR|g" -e "s|@DOTNET_BIN@|$DOTNET_BIN|g" \
   "$ROOT/scripts/vpet.sh.in" > "$INSTALL_DIR/vpet.sh"
