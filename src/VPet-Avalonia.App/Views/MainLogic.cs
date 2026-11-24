@@ -45,8 +45,8 @@ namespace VPetAvalonia.App.Views
         private int _lastLevel = -1;
 
         /// <summary>
-        /// 体力/心情/饱腹/口渴等数值发生变化时触发, 供数据面板立即刷新。
-        /// 之前面板只靠 800ms 定时器刷新, 摸头弹窗写着 -2/+1 时面板还是旧数字,
+        /// 体力/心情/饱腹/口渴等数值发生变化时触发, 供角色面板立即刷新。
+        /// 之前面板只靠定时器刷新, 摸头弹窗写着 -2/+1 时面板还是旧数字,
         /// 看起来就像"弹窗和面板对不上"
         /// </summary>
         public event Action? ValueChanged;
@@ -62,7 +62,7 @@ namespace VPetAvalonia.App.Views
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 try { handler(); }
-                catch (Exception e) { Console.WriteLine("[VPet] 刷新数据面板失败: " + e.Message); }
+                catch (Exception e) { Console.WriteLine("[VPet] 刷新面板失败: " + e.Message); }
             });
         }
 

@@ -395,8 +395,7 @@ namespace VPetAvalonia.App.Views
         }
 
         /// <summary>
-        /// 开始/停止一项工作。开始成功后收起面板 —— 桌宠动画要看得见,
-        /// 原版 ToolBar.StartWork 成功后也是把界面藏起来。
+        /// 开始/停止一项工作。开始成功后收起面板 —— 桌宠动画要看得见。
         /// </summary>
         private void StartOrStopWork(Work work)
         {

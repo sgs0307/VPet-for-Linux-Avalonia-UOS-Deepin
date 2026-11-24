@@ -25,9 +25,6 @@
             <!-- 工作计时器 -->
             <views:WorkTimer x:Name="WorkTimer" Width="300" Height="200" IsVisible="False" />
 
-            <!-- 数据面板, 默认隐藏, 通过右键菜单或点击面板按钮打开 -->
-            <views:ToolBar x:Name="ToolBar" Width="500" Height="500" IsVisible="False" />
-
             <!-- 右键菜单: 项目当前没有引入 Avalonia 主题包,
                  MenuItem 等需要控件模板的控件在无主题时不会渲染,
                  因此这里用 Border + TextBlock 自行绘制, 保证任何环境下都能用。

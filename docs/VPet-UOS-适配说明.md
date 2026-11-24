@@ -36,7 +36,7 @@
 - 无边框、背景透明、始终置顶、不进任务栏
 - 铺满整个屏幕工作区，宠物贴在屏幕底部居中
 - 可拖拽（拖拽后自动夹在屏幕内，松手靠边）
-- 右键菜单：数据面板 / 摸摸头 / 说说话 / 置顶 / 穿透 / 回底部 / 退出
+- 右键菜单：角色面板 / 成就 / 物品栏 / 投喂 / 工作学习 / 商店 / 睡觉·唤醒 / 摸摸头 / 说说话 / 设置 / 置顶 / 穿透 / 回底部 / 退出
 - 窗口关闭时保存存档并释放位图缓存
 
 ### 3. 渲染管线（`PetImageElement.cs` 新增，`Picture` / `PNGAnimation` 重写）
@@ -1819,3 +1819,31 @@ convert shot.png -crop 560x620+565+370   # 按面板实际位置裁
 - **工作倍率**：原版 `Work.Double(value)` 生成 ×2/×5 版本（消耗乘 `0.5+0.4×value`，
   等级门槛 `(LevelLimit+10)×value`）。入口是 `winWorkMenu` 的倍率选择，
   实现不难，但需要先想清楚"倍率版本"在存档 / 统计里怎么归属
+
+## 二十五、移除「数据面板」（2026-11-24，v1.4.1）
+
+v1.0 为了"能看见数值"临时做了一个小浮窗（`ToolBar` 里的 `BdrPanel`）：Lv 标题、金钱、
+经验/体力/心情/饱腹/口渴五条蓝色 `ProgressBar`、右上角一个「详细」。v1.4.0 的角色面板
+把同样的数值做得更全（多了健康/好感/成就/年报/能力上限），于是这个浮窗只剩"两处同时刷新
+同一批数字"的负担，直接删掉。
+
+### 删了什么
+
+| 位置 | 内容 |
+|---|---|
+| `Views/ToolBar.axaml` / `.axaml.cs` | 整个控件（只服务于这个浮窗，`ToolBarMenu` 从来没启用过） |
+| `MainWindow.axaml` | `<views:ToolBar x:Name="ToolBar" .../>` |
+| `MainWindow.axaml.cs` | `HookLayoutRefresh` 里的 `ToolBar.LayoutUpdated`、`SetMainDisplay`、`LayoutPetUI` 的定位、`UpdateClickThrough` 的输入区域、菜单项「数据面板」 |
+| `MainWindow.Controller.cs` | `ShowPanel()`（原本负责切 `ToolBar.IsVisible` + `TogglePanel()`） |
+| `Core.Migrated/Handle/IController.cs`、`Abstractions/Interfaces/IController.cs` | `void ShowPanel();` 声明 |
+| `MainLogic.cs` | `ValueChanged` 的注释（说"供数据面板刷新"）与 catch 日志文案 |
+
+### 注意
+
+- `IController.ShowPanel()` 是原版接口的一部分，**删声明必须连实现一起删**，否则
+  `MainWindow : IController` 编译不过。项目里没有任何地方调用 `Controller.ShowPanel()`，
+  所以删除是安全的；如果以后要恢复浮窗，得把声明加回两处接口。
+- 菜单少了一项，`ContextItems.Children.Count * 38 + 16` 这个高度估算会自动跟着变短，
+  不需要改 `MaxHeight` 相关代码。
+- 删除后实测：右键菜单首项是「角色面板」，点击照旧打开三页签面板；
+  `VPET_SHOW_PANEL=char` 截图正常，无异常日志。

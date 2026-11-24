@@ -33,7 +33,7 @@ namespace VPetAvalonia.App.Native
         /// Avalonia.X11.AvaloniaX11Platform, 且 XShape 扩展在 XWayland 上同样可用。
         /// 若按"Wayland 会话"降级成宠物大小的小窗口, 会出现:
         ///   1. 拖动失效(MoveWindows 移动的是窗口内画布, 小窗口下被夹在 (0,0));
-        ///   2. 数据面板只能叠在宠物身上显示;
+        ///   2. 面板只能叠在宠物身上显示;
         ///   3. 鼠标穿透直接不可用。
         /// 因此判定依据是 DISPLAY 是否存在, 而不是桌面会话类型。
         /// </summary>

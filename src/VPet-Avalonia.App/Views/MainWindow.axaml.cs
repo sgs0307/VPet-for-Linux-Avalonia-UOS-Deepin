@@ -76,9 +76,9 @@ namespace VPetAvalonia.App.Views
         }
 
         /// <summary>
-        /// 菜单/面板刚设置 IsVisible=true 时 Bounds 尚未布局(高度为0),
+        /// 菜单刚设置 IsVisible=true 时 Bounds 尚未布局(高度为0),
         /// 此时计算出的 XShape 输入区域高度为 0 → 点击全部穿透到桌面,
-        /// 表现为"右键菜单点不动、数据面板打不开"。
+        /// 表现为"右键菜单看得见但点不动"。
         /// 挂 LayoutUpdated, 布局真正完成后重算输入区域
         /// </summary>
         private void HookLayoutRefresh()
@@ -86,11 +86,6 @@ namespace VPetAvalonia.App.Views
             ContextPanel.LayoutUpdated += (s, e) =>
             {
                 if (ContextPanel.IsVisible)
-                    UpdateClickThrough();
-            };
-            ToolBar.LayoutUpdated += (s, e) =>
-            {
-                if (ToolBar.IsVisible)
                     UpdateClickThrough();
             };
             // LayoutPetUI 会跳过不可见的控件(拖动时省一次无谓的 arrange),
@@ -133,12 +128,9 @@ namespace VPetAvalonia.App.Views
 
             MainDisplay.MessageBar = MessageBar;
             MainDisplay.WorkTimer = WorkTimer;
-            ToolBar.SetMainDisplay(MainDisplay);
-            // 数值一变就让面板跟上, 不等 800ms 定时器
+            // 数值一变就让角色面板跟上, 不等它自己的定时器
             MainDisplay.ValueChanged += () =>
             {
-                if (ToolBar.IsVisible)
-                    ToolBar.RefreshValues();
                 if (_charPanel is { IsVisible: true })
                     UpdateCharacterPanel();
             };
@@ -1722,13 +1714,6 @@ namespace VPetAvalonia.App.Views
                 Canvas.SetLeft(WorkTimer, timerLeft);
                 Canvas.SetTop(WorkTimer, Math.Max(0, _petTop - 60));
             }
-
-            // 数据面板: 宠物上方
-            if (ToolBar.IsVisible)
-            {
-                Canvas.SetLeft(ToolBar, _petLeft + (petW - ToolBar.Width) / 2);
-                Canvas.SetTop(ToolBar, Math.Max(0, _petTop - ToolBar.Height - 10));
-            }
         }
 
         #endregion
@@ -2104,17 +2089,6 @@ namespace VPetAvalonia.App.Views
                 )
             };
 
-            // 面板展开时, 面板区域也要能点
-            if (ToolBar.IsVisible)
-            {
-                regions.Add((
-                    (int)(Canvas.GetLeft(ToolBar) * scale),
-                    (int)(Canvas.GetTop(ToolBar) * scale),
-                    (int)(ToolBar.Width * scale),
-                    (int)(ToolBar.Height * scale)
-                ));
-            }
-
             // 右键菜单展开时, 菜单区域也要能点
             // 菜单刚 IsVisible=true 时 Bounds.Height 还是 0, 直接用它会导致
             // 输入区域高度为 0 → 点击全部穿透到桌面(菜单看得见但点不动)
@@ -2167,7 +2141,6 @@ namespace VPetAvalonia.App.Views
         {
             Root.PointerPressed += OnRootPointerPressed;
 
-            AddMenuItem("数据面板", () => ShowPanel());
             AddMenuItem("角色面板", ShowCharacterPanel);
             AddMenuItem("成就", ShowAchievementsPanel);
             AddMenuItem("物品栏", ShowInventoryPanel);

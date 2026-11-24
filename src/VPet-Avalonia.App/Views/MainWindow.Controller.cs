@@ -114,20 +114,6 @@ namespace VPetAvalonia.App.Views
         public void SetNowScreenActivate() { }
 
         /// <summary>
-        /// 显示数据面板
-        /// </summary>
-        public void ShowPanel()
-        {
-            // 原版工具条的面板区(BdrPanel)默认是隐藏的, 只切 ToolBar 会显示一个空壳,
-            // 这就是"数据面板打不开"的直接原因。TogglePanel 连数值区一起切换并刷新数据
-            ToolBar.IsVisible = !ToolBar.IsVisible;
-            ToolBar.TogglePanel();
-            Console.WriteLine($"[VPet] 数据面板: ToolBar={ToolBar.IsVisible}");
-            LayoutPetUI();
-            UpdateClickThrough();
-        }
-
-        /// <summary>
         /// 在边缘时重新靠边, 防止宠物被拖出屏幕或被任务栏挡住
         /// </summary>
         public void ResetPosition()

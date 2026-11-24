@@ -56,11 +56,6 @@ namespace VPetAvalonia.Abstractions.Interfaces
         int PressLength { get; }
         
         /// <summary>
-        /// 显示面板窗体
-        /// </summary>
-        void ShowPanel();
-        
-        /// <summary>
         /// 在边缘时重新靠边，防止被阻挡
         /// </summary>
         void ResetPosition();
