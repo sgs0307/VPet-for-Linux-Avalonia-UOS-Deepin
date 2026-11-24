@@ -73,15 +73,15 @@
 
 | 包 | 说明 |
 |---|---|
-| `VPet-UOS-v1.3.1-linux-x64-full.tar.gz` | 含桌宠资源 + .NET 运行时，**解压即用**（约 1.0 GB） |
-| `VPet-UOS-v1.3.1-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
+| `VPet-UOS-v1.4.1-linux-x64-full.tar.gz` | 含桌宠资源 + .NET 运行时，**解压即用**（约 1.0 GB） |
+| `VPet-UOS-v1.4.1-linux-arm64-full.tar.gz` | 同上，arm64（信创机器 / 鲲鹏 / 飞腾） |
 | `...-nomod.tar.gz` | 不含桌宠资源，体积小（约 42 MB），需自备 `mod/` 目录 |
 
 不确定自己的架构？终端里跑 `uname -m`：`x86_64` 选 x64，`aarch64` 选 arm64。
 
 ```bash
-tar xzf VPet-UOS-v1.3.1-linux-x64-full.tar.gz
-cd VPet-UOS-v1.3.1
+tar xzf VPet-UOS-v1.4.1-linux-x64-full.tar.gz
+cd VPet-UOS-v1.4.1
 ./scripts/install.sh            # 安装到 ~/.local/share/vpet 并生成桌面快捷方式
 ```
 
