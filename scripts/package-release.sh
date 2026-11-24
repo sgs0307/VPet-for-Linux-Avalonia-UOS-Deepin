@@ -112,7 +112,10 @@ stage() {
     ln -sfn "$MOD_DIR" "$STAGE/$PKG/publish/mod"
   fi
   # 仓库里的脚本、图标与说明(install.sh 要从 assets/icon 取图标)
-  for item in scripts packaging assets docs README.md CHANGELOG.md VERSION LICENSE; do
+  # 四个语言版本的 README 都带上: 系统语言不是中文的用户解压后也能看懂安装步骤
+  for item in scripts packaging assets docs README.md README.en.md README.zh-TW.md README.ja.md \
+              CHANGELOG.md VERSION LICENSE; do
+    [[ -e "$ROOT/$item" ]] || continue
     ln -sfn "$ROOT/$item" "$STAGE/$PKG/$item"
   done
 }

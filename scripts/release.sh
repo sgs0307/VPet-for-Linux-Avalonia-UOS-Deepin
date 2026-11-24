@@ -98,14 +98,16 @@ echo "Release正文: ${NOTES_FILE#$ROOT/}$([[ -f "$NOTES_FILE" ]] && echo '' || 
 # ---- 1. 写版本号 ----
 step "1/6 更新版本号"
 run bash -c "printf '%s\n' '$VERSION' > '$ROOT/VERSION'"
-# README 里有两处版本号必须一起改, 只改徽章会让"下载表格"停在旧版本:
+# 版本号在 README 里有多处, 而且现在有 4 个语言版本(README.md / .en / .zh-TW / .ja),
+# 只改徽章会让"下载表格"停在旧版本(前几个版本就踩过):
 #   徽章      badge/version-1.3.1-blue
 #   包文件名  VPet-UOS-v1.3.1-linux-x64-full.tar.gz / cd VPet-UOS-v1.3.1
-if [[ -f "$ROOT/README.md" ]]; then
-  run sed -i "s#badge/version-[0-9][0-9.]*-blue#badge/version-${VERSION}-blue#" "$ROOT/README.md"
-  run sed -i "s#VPet-UOS-v[0-9][0-9.]*#VPet-UOS-v${VERSION}#g" "$ROOT/README.md"
-  echo "README 徽章 + 包文件名 → $VERSION"
-fi
+for f in "$ROOT"/README*.md; do
+  [[ -f "$f" ]] || continue
+  run sed -i "s#badge/version-[0-9][0-9.]*-blue#badge/version-${VERSION}-blue#g" "$f"
+  run sed -i "s#VPet-UOS-v[0-9][0-9.]*#VPet-UOS-v${VERSION}#g" "$f"
+  echo "README 徽章 + 包文件名 → $VERSION  ($(basename "$f"))"
+done
 echo "提醒: CHANGELOG.md 的顶部条目仍需手写(脚本不替你编内容)"
 
 # ---- 2. 构建 ----

@@ -1,5 +1,7 @@
 # VPet for Linux (Avalonia) — 统信 UOS / Deepin 适配版
 
+**简体中文** · [English](README.en.md) · [繁體中文](README.zh-TW.md) · [日本語](README.ja.md)
+
 ![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![Platform](https://img.shields.io/badge/platform-Linux%20(UOS%2FDeepin)-green)
 ![Arch](https://img.shields.io/badge/arch-x64%20%7C%20arm64-lightgrey)
@@ -162,7 +164,10 @@ VPET_RID=linux-arm64 ./scripts/build.sh --self-contained   # 交叉出 arm64
 
 ```
 VPet-Avalonia-UOS/
-├── README.md                 本文件
+├── README.md                 简体中文说明（本文件）
+├── README.en.md              英文说明
+├── README.zh-TW.md           繁体中文说明
+├── README.ja.md              日文说明
 ├── CHANGELOG.md              版本记录
 ├── LICENSE                   Apache-2.0（沿用上游）
 ├── VERSION                   当前版本号

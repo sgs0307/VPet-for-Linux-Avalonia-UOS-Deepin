@@ -17,6 +17,11 @@ SRC="$ROOT/publish"
 INSTALL_DIR="${1:-${XDG_DATA_HOME:-$HOME/.local/share}/vpet}"
 DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
 
+# 安装目录统一转绝对路径: 桌面快捷方式的 Exec 会写死这个路径,
+# 传相对路径(./scripts/install.sh ./app)时生成的 Exec 是相对路径, 换个目录启动就失效。
+# realpath -m 允许目标不存在, 失败(极老系统)就退回原样。
+INSTALL_DIR="$(realpath -m -- "$INSTALL_DIR" 2>/dev/null || echo "$INSTALL_DIR")"
+
 if [[ ! -d "$SRC" ]]; then
   echo "错误: 发布目录不存在: $SRC"
   echo "请先运行 ./scripts/build.sh"
